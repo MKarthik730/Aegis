@@ -1,7 +1,7 @@
 <div align="center">
 
 # 🛡️ Aegis
-### Real-time Family Safety & Emergency Alert App
+### Real-time  Safety & Emergency Alert App
 
 [![Android](https://img.shields.io/badge/Platform-Android-green?logo=android)](https://android.com)
 [![Kotlin](https://img.shields.io/badge/Language-Kotlin-purple?logo=kotlin)](https://kotlinlang.org)
