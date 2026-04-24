@@ -1,220 +1,180 @@
-<div align="center">
-
 # 🛡️ Aegis
-### Real-time Safety & Emergency Alert App
+## Real-time Family Safety & Emergency Response Platform
 
-[![Android](https://img.shields.io/badge/Platform-Android-green?logo=android)](https://android.com)
-[![Kotlin](https://img.shields.io/badge/Language-Kotlin-purple?logo=kotlin)](https://kotlinlang.org)
-[![Firebase](https://img.shields.io/badge/Backend-Firebase-orange?logo=firebase)](https://firebase.google.com)
-[![Maps](https://img.shields.io/badge/Maps-Google%20Maps%20SDK-blue?logo=googlemaps)](https://developers.google.com/maps)
-[![Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-blue)](https://developer.android.com/jetpack/compose)
-[![Hilt](https://img.shields.io/badge/DI-Hilt-red)](https://dagger.dev/hilt)
-[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
-[![Status](https://img.shields.io/badge/Status-In%20Development-yellow)]()
+[![Android](https://img.shields.io/badge/Platform-Android-green?style=for-the-badge&logo=android)](https://developer.android.com)
+[![Kotlin](https://img.shields.io/badge/Language-Kotlin-purple?style=for-the-badge&logo=kotlin)](https://kotlinlang.org)
+[![Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-blue?style=for-the-badge)](https://developer.android.com/jetpack/compose)
+[![Firebase](https://img.shields.io/badge/Backend-Firebase-orange?style=for-the-badge&logo=firebase)](https://firebase.google.com)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/MKarthik730/aegis?style=for-the-badge)](https://github.com/MKarthik730/aegis/stargazers)
 
-*Your family. Protected. Always.*
-
-</div>
+Aegis is a comprehensive Android application designed to provide real-time safety monitoring and emergency response capabilities for families. From instant SOS alerts triggered by accidents or falls to continuous location sharing and intelligent geofencing, Aegis ensures your loved ones are protected around the clock.
 
 ---
 
-## 📱 What is Aegis?
+## 📋 Overview
 
-Aegis is an all-in-one Android family safety app that keeps your loved ones protected in real time. From one-tap SOS alerts and crash detection to live location sharing and smart geofencing — Aegis is the shield your family never knew they needed.
+Aegis is a production-ready Android application built with modern development practices, providing families with:
 
----
-
-## ✨ Features
-
-### ⚡ Safety & Alerts
-| Feature | Status | Description |
-|---|---|---|
-| SOS Alert | ✅ | One tap sends emergency alert with live location instantly |
-| Silent SOS | ✅ | Secret alert triggered by holding volume down three seconds |
-| Auto SOS | ✅ | Automatically alerts family if check-in is not responded |
-| Crash Detection | ✅ | Detects high-impact collision and triggers emergency alert automatically |
-| Fall Detection | ✅ | Monitors sensors for serious fall and alerts your family |
-| Panic Button | ✅ | Large always-visible button fires SOS without opening app |
-| Voice Triggered SOS | 🔜 | Say trigger phrase to fire SOS without touching phone |
-| Scheduled SOS Check | 🔜 | Auto-alerts family if you miss a scheduled safety check |
-| Impact Drop Detection | ✅ | Detects phone freefall and high-altitude drop automatically |
-| Sudden Deceleration Alert | ✅ | Detects vehicle crashing from high speed to sudden stop |
-
-### 📍 Location
-| Feature | Status | Description |
-|---|---|---|
-| Live Location | ✅ | Shares your real-time GPS location with family continuously |
-| Location History | ✅ | Stores your past movement data for later review |
-| Route Playback | 🔜 | Replay any family member's route from the past day |
-| Last Seen Location | ✅ | Shows exact location where member was last active online |
-| Speed Monitoring | ✅ | Detects abnormally high speed and alerts family immediately |
-| Live ETA | 🔜 | Shows estimated arrival time to your set destination live |
-| Arrival Alerts | ✅ | Notifies family the moment you reach your destination safely |
-| Departure Alerts | ✅ | Notifies family the moment you leave a known location |
-
-### 🔵 Zones
-| Feature | Status | Description |
-|---|---|---|
-| Safe Zones | ✅ | Define trusted areas like home or school for monitoring |
-| Danger Zones | ✅ | Mark unsafe areas and get alerted when nearby |
-| School Zone Alert | ✅ | Special alert when child enters or leaves school zone |
-| Work Zone Alert | ✅ | Notifies family when member arrives or leaves workplace |
-| Custom Zone Names | ✅ | Name your zones anything meaningful to your family |
-| Zone Entry Alert | ✅ | Instant notification when any member enters a defined zone |
-| Zone Exit Alert | ✅ | Instant notification when any member leaves a defined zone |
-
-### 👨‍👩‍👧 Family
-| Feature | Status | Description |
-|---|---|---|
-| Family Group | ✅ | Create a private group connecting all your family members |
-| Family Invite | ✅ | Invite members via shareable link in one tap |
-| Member Status | ✅ | See if each family member is safe or unsafe |
-| Member Profile | ✅ | Each member has a name, photo, and contact info |
-| Trust Levels | ✅ | Assign admin or member roles within your family group |
-| Admin Controls | ✅ | Admin can manage zones, contacts, and group settings |
-
-### 💬 Communication
-| Feature | Status | Description |
-|---|---|---|
-| In-app Messaging | 🔜 | Send quick messages to family directly inside Aegis |
-| Emergency Call Shortcut | ✅ | One tap calls your primary emergency contact instantly |
-| Offline SMS Fallback | ✅ | Sends SOS via SMS when there is no internet |
-| Real-time Notifications | ✅ | Instant push alerts for every safety event and update |
-| Alert History Log | ✅ | Full history of every alert triggered within your group |
-
-### 🔋 Device & Health
-| Feature | Status | Description |
-|---|---|---|
-| Battery Alert | ✅ | Warns family when your battery drops below critical level |
-| Phone Signal Alert | ✅ | Alerts family when your phone loses network signal entirely |
-| Night Mode Sensitivity | ✅ | Increases detection sensitivity automatically during late night hours |
-| Do Not Disturb Override | ✅ | Safety alerts bypass DND and silent mode always |
-| Device Offline Alert | ✅ | Notifies family when your device goes completely offline unexpectedly |
-
-### 🧠 Intelligence
-| Feature | Status | Description |
-|---|---|---|
-| Safety Score | 🔜 | Weekly score based on check-ins, zones, and safe behavior |
-| Threat Detection | 🔜 | AI detects unusual patterns like stopped movement or odd location |
-| Unusual Activity Alert | ✅ | Flags abnormal behavior like no movement for too long |
-| Weekly Safety Report | 🔜 | Summary of your family's safety activity every week |
-| Mesh Network Fallback | 🔜 | Devices communicate over Bluetooth when internet and SMS fail |
-
-**Legend:** ✅ Implemented | 🔜 Planned/In Progress
+- **Instant Emergency Response** — Multi-trigger SOS system with automatic crash and fall detection
+- **Real-time Location Sharing** — Continuous GPS tracking with offline queue support
+- **Intelligent Geofencing** — Customizable safe zones with instant entry/exit notifications
+- **Family Coordination** — Group management with role-based permissions and member status monitoring
+- **Offline Resilience** — SMS fallback when internet is unavailable
 
 ---
 
-## 🧰 Tech Stack
+## ✨ Key Features
 
-| Category | Technology |
-|---|---|
-| **Language** | Kotlin 1.9.x |
-| **UI** | Jetpack Compose + Material 3 |
-| **Architecture** | MVVM + Repository Pattern |
-| **DI** | Hilt |
-| **Auth** | Firebase Authentication (Phone + Email) |
-| **Database** | Firebase Realtime DB + Firestore |
-| **Notifications** | Firebase Cloud Messaging (FCM) |
-| **Maps** | Google Maps SDK + Compose |
-| **Location** | FusedLocationProviderClient |
-| **Sensors** | Android SensorManager (Accelerometer + Gyroscope) |
-| **ML** | ML Kit Face Detection (Fatigue) |
-| **Background** | ForegroundService + WorkManager |
-| **Storage** | Room DB (offline queue) + DataStore Preferences |
-| **Camera** | CameraX |
+### 🚨 Emergency Response
+
+| Feature | Description |
+|---------|-------------|
+| **SOS Alert** | One-tap emergency alert with live GPS location to all emergency contacts |
+| **Auto Crash Detection** | Accelerometer-based collision detection (3.5G threshold) with 30s countdown |
+| **Fall Detection** | Freefall pattern recognition using accelerometer analysis |
+| **Fatigue Detection** | ML Kit-powered driver drowsiness detection via front camera |
+| **Shake SOS** | Rapid device shaking (5x in 2s) triggers emergency alert |
+| **Volume Button SOS** | Triple volume press triggers silent emergency |
+| **Power Button SOS** | Five rapid power button presses triggers emergency |
+| **Offline SMS** | Automatic SMS fallback when no internet connectivity |
+
+### 📍 Location Services
+
+| Feature | Description |
+|---------|-------------|
+| **Live Tracking** | Real-time GPS sharing with configurable intervals (5s active / 30s passive) |
+| **Route Deviation** | Alerts when user deviates 200m+ from planned route |
+| **Speed Monitoring** | Immediate alerts for abnormal speed detection |
+| **Location History** | Full movement history stored for review |
+| **Offline Queue** | Room DB-based location storage during network outages |
+| **ETA Tracking** | Estimated arrival time calculation |
+
+### 🔵 Geofencing
+
+| Feature | Description |
+|---------|-------------|
+| **Safe Zones** | Custom radius zones (default 150m) with entry/exit notifications |
+| **Danger Zones** | Unsafe area alerts |
+| **Home Detection** | WiFi-based home arrival detection |
+| **School/Work Zones** | Specialized notifications for routine locations |
+| **Firebase Sync** | Real-time zone updates across all family devices |
+
+### 👨‍👩‍👧 Family Management
+
+| Feature | Description |
+|---------|-------------|
+| **Group Creation** | Private family groups with invite links |
+| **Member Status** | Real-time online/offline/safe/unsafe status |
+| **Role-based Access** | Admin and member permission levels |
+| **Member Profiles** | Name, photo, phone, and contact information |
+
+### 📱 Communication
+
+| Feature | Description |
+|---------|-------------|
+| **Push Notifications** | Firebase Cloud Messaging for instant alerts |
+| **Emergency Call** | One-tap calling to primary emergency contact |
+| **Alert History** | Complete log of all safety events |
+| **Morse Vibration** | SOS pattern vibration (... --- ...) for incoming alerts |
+
+### 🔧 Device Health
+
+| Feature | Description |
+|---------|-------------|
+| **Battery Alerts** | Family notification when battery critically low |
+| **Signal Loss Alerts** | Immediate warning when phone goes offline |
+| **DND Override** | All safety alerts bypass Do Not Disturb mode |
+| **Night Mode** | Enhanced sensitivity during late night hours |
+
+---
+
+## 🛠️ Technology Stack
+
+| Category | Technology | Purpose |
+|----------|------------|---------|
+| **Language** | Kotlin 1.9.x | Primary development language |
+| **UI Framework** | Jetpack Compose | Modern declarative UI toolkit |
+| **Design System** | Material Design 3 | Consistent and accessible design |
+| **Architecture** | MVVM + Clean Architecture | Separation of concerns |
+| **Dependency Injection** | Hilt | Compile-time DI framework |
+| **Authentication** | Firebase Auth | Phone & Email authentication |
+| **Real-time Database** | Firebase Realtime DB | Live location & alert sync |
+| **Document Database** | Cloud Firestore | User data & FCM queue |
+| **Push Notifications** | Firebase Cloud Messaging | Instant notifications |
+| **Maps** | Google Maps SDK | Location visualization |
+| **Location Services** | FusedLocationProvider | Battery-efficient GPS |
+| **Sensors** | SensorManager | Accelerometer, Gyroscope |
+| **Machine Learning** | ML Kit Face Detection | Fatigue monitoring |
+| **Camera** | CameraX | Camera integration |
+| **Background Processing** | ForegroundService | Persistent tracking |
+| **Local Storage** | Room Database | Offline queue |
+| **Preferences** | DataStore | App settings |
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                      UI Layer                          │
-│            Jetpack Compose + ViewModels                │
-└────────────────────────┬────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────┐
-│                   Domain Layer                         │
-│        Repositories (Location, Family, SOS)           │
-└────────────────────────┬────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────┐
-│                   Data Layer                           │
-│   Firebase (Auth/Firestore/RTDB/FCM) + Room DB        │
-│   Location Services + Sensor Manager                  │
-└─────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│                         UI Layer                           │
+│   Screens (Compose)  │  ViewModels (StateFlow)  │  Nav    │
+└───────────────────────────────┬────────────────────────────┘
+                                │
+┌────────────────────────────────────────────────────────────┐
+│                      Domain Layer                          │
+│   Repositories  │  Models (Data)  │  Use Cases (Logic)     │
+└───────────────────────────────┬────────────���───────────────┘
+                                │
+┌────────────────────────────────────────────────────────────┐
+│                       Data Layer                           │
+│   Firebase (Auth/DB/Firestore/FCM)  │  Local (Room/DStore)│
+└───────────────────────────────┬────────────────────────────┘
+                                │
+┌────────────────────────────────────────────────────────────┐
+│                    Platform Layer                          │
+│   Services (Foreground)  │  Receivers  │  System APIs      │
+└────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 📁 Project Structure
+## 📂 Project Structure
 
 ```
 Aegis/
-│
-├── app/
-│   └── src/main/
-│       ├── java/com/karthik/aegis/
-│       │   ├── AegisApplication.kt          # Hilt Application
-│       │   ├── di/
-│       │   │   └── AppModule.kt             # Dependency Injection
-│       │   ├── model/
-│       │   │   └── Models.kt                # Data classes
-│       │   ├── utils/
-│       │   │   ├── AegisPrefs.kt            # DataStore preferences
-│       │   │   ├── DistanceUtils.kt         # GPS calculations
-│       │   │   └── NotificationUtils.kt    # Notification helpers
-│       │   ├── repository/
-│       │   │   ├── SOSRepository.kt         # SOS logic
-│       │   │   ├── ContactsRepository.kt   # Emergency contacts
-│       │   │   ├── LocationRepository.kt   # Location tracking
-│       │   │   ├── FamilyRepository.kt      # Family groups
-│       │   │   └── ZoneRepository.kt       # Safe zones
-│       │   ├── service/
-│       │   │   ├── LocationTrackingService.kt  # Background GPS
-│       │   │   ├── AccidentDetectorService.kt  # Crash/Fall detection
-│       │   │   ├── SOSBroadcastReceiver.kt     # SOS triggers
-│       │   │   ├── BootReceiver.kt             # Auto-start
-│       │   │   └── AegisFirebaseMessagingService.kt  # Push notifications
-│       │   └── ui/
-│       │       ├── MainActivity.kt         # Entry point
-│       │       ├── navigation/
-│       │       │   └── NavHost.kt          # Navigation graph
-│       │       ├── theme/
-│       │       │   ├── Theme.kt           # Material 3 theme
-│       │       │   └── Typography.kt
-│       │       ├── splash/
-│       │       │   ├── Screen.kt          # Splash ViewModel
-│       │       │   └── SplashScreen.kt
-│       │       ├── auth/
-│       │       │   ├── AuthScreen.kt      # Phone/Email login
-│       │       │   └── AuthViewModel.kt
-│       │       └── home/
-│       │           ├── HomeScreen.kt       # Main dashboard
-│       │           └── HomeViewModel.kt
-│       │
-│       ├── res/
-│       │   ├── drawable/
-│       │   ├── values/
-│       │   └── xml/
-│       │
-│       ├── AndroidManifest.xml
-│       └── build.gradle.kts
-│
-├── services/                           # Legacy location-aware service files
-│   └── *.kt
-│
-├── sos/                               # Legacy SOS implementation
-│   └── *.kt
-│
-├── gradle/
-│   └── wrapper/
-│       └── gradle-wrapper.properties
-│
-├── build.gradle.kts                    # Root build file
-├── settings.gradle.kts
-├── gradle.properties
-├── local.properties.example
+├── app/src/main/
+│   ├── java/com/karthik/aegis/
+│   │   ├── AegisApplication.kt     # Hilt Application entry point
+│   │   ├── di/AppModule.kt         # Dependency Injection
+│   │   ├── model/Models.kt         # Data models
+│   │   ├── repository/             # Repositories
+│   │   │   ├── SOSRepository.kt
+│   │   │   ├── ContactsRepository.kt
+│   │   │   ├── FamilyRepository.kt
+│   │   │   ├── LocationRepository.kt
+│   │   │   └── ZoneRepository.kt
+│   │   ├── service/                # Background services
+│   │   │   ├── LocationTrackingService.kt
+│   │   │   ├── AccidentDetectorService.kt
+│   │   │   ├── SOSBroadcastReceiver.kt
+│   │   │   ├── BootReceiver.kt
+│   │   │   └── AegisFirebaseMessagingService.kt
+│   │   ├── ui/                     # User interface
+│   │   │   ├── MainActivity.kt
+│   │   │   ├── navigation/NavHost.kt
+│   │   │   ├── splash/SplashScreen.kt
+│   │   │   ├── auth/AuthScreen.kt
+│   │   │   ├���─ home/HomeScreen.kt
+│   │   │   └── theme/Theme.kt
+│   │   └── utils/                  # Utilities
+│   │       ├── AegisPrefs.kt
+│   │       ├── DistanceUtils.kt
+│   │       └── NotificationUtils.kt
+│   ├── res/                        # Android resources
+│   └── AndroidManifest.xml
+├── build.gradle.kts               # Root build configuration
+├── settings.gradle.kts            # Project settings
 └── README.md
 ```
 
@@ -223,154 +183,91 @@ Aegis/
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Android Studio Hedgehog (2023.1.1) or later
-- Android SDK 26+ (minSdk)
-- Android SDK 34 (targetSdk/compileSdk)
-- JDK 17
-- Google account (for Firebase + Maps API)
 
-### Setup
+| Requirement | Version |
+|-------------|---------|
+| Android Studio | Hedgehog (2023.1.1) or later |
+| Java Development Kit | JDK 17 |
+| Android SDK | API 26+ (minSdk) |
+| Target SDK | API 34 |
 
-1. **Clone the repo**
-   ```bash
-   git clone https://github.com/MKarthik730/aegis.git
-   cd aegis
-   ```
+### Installation Steps
 
-2. **Create a Firebase project**
-   - Go to [console.firebase.google.com](https://console.firebase.google.com)
-   - Create new project "Aegis"
-   - Enable:
-     - **Authentication** (Phone + Email/Password)
-     - **Realtime Database** (start in test mode)
-     - **Firestore** (start in test mode)
-     - **Cloud Messaging** (for push notifications)
+#### 1. Clone the Repository
+```bash
+git clone https://github.com/MKarthik730/aegis.git
+cd aegis
+```
 
-3. **Download Firebase config**
-   - Go to Project Settings → Your apps → Add Android app
-   - Enter package name: `com.karthik.aegis`
-   - Download `google-services.json`
-   - Replace the placeholder file in `/app`
+#### 2. Create Firebase Project
+1. Go to [Firebase Console](https://console.firebase.google.com)
+2. Create project "Aegis"
+3. Enable: Authentication (Phone + Email), Realtime Database, Cloud Firestore, Cloud Messaging
+4. Add Android app with package `com.karthik.aegis`
+5. Download `google-services.json` to `/app/`
 
-4. **Get Google Maps API Key**
-   - Go to [Google Cloud Console](https://console.cloud.google.com)
-   - Enable **Maps SDK for Android**
-   - Create API key with restrictions
-   - Update `gradle.properties`:
-     ```
-     MAPS_API_KEY=your_actual_api_key_here
-     ```
-   - Copy to `local.properties` in project root (if not using gradle.properties)
+#### 3. Configure Google Maps API
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Enable Maps SDK for Android
+3. Create API Key and add to `gradle.properties`:
+```properties
+MAPS_API_KEY=your_actual_api_key_here
+```
 
-5. **Open in Android Studio**
-   - Open the project folder
-   - Wait for Gradle sync to complete
-   - Build and run on a physical device (API 26+)
-
-> ⚠️ **Important:** Never commit `google-services.json` or `local.properties` to version control. Both are in `.gitignore`.
+#### 4. Build the Project
+```bash
+./gradlew assembleDebug
+```
 
 ---
 
-## 🧪 Features In Detail
+## ⚙️ Permissions
 
-### SOS Alert System
-- **Multiple triggers:** Button, volume button (5 presses), power button (5 presses), shake, crash detection, fall detection
-- **Auto-SOS countdown:** 30-second countdown with cancel option after crash/fall detection
-- **Multi-channel alert:** Firebase Realtime DB + FCM push + SMS fallback
-- **Audit trail:** All SOS events logged with timestamp and reason
-
-### Location Tracking
-- **Active mode:** Updates every 5 seconds (driving)
-- **Passive mode:** Updates every 30 seconds (walking/idle)
-- **Offline queue:** Room DB stores locations when offline, syncs when back online
-- **Anomaly detection:** Alerts if stationary for 30+ minutes on route
-
-### Safe Zones
-- **Firebase real-time sync:** Zones update live across devices
-- **Geofencing:** Configurable radius (default 150m)
-- **Special zones:** Home, School, Work with specific notifications
-- **Route deviation:** Alerts if user deviates 200m+ from planned route
-
-### Accident Detection
-- **Crash detection:** 3.5G threshold with 300ms confirmation window
-- **Fall detection:** Freefall → impact pattern analysis
-- **Fatigue detection:** ML Kit face analysis for drowsy driving (camera required)
-- **Shake SOS:** 5 shakes in 2 seconds triggers emergency
-
----
-
-## 📸 Screenshots
-
-| Splash | Auth | Home | SOS |
-|---|---|---|---|
-| coming soon | coming soon | coming soon | coming soon |
+| Permission | Purpose |
+|------------|---------|
+| `ACCESS_FINE_LOCATION` | GPS location tracking |
+| `FOREGROUND_SERVICE` | Persistent background services |
+| `CAMERA` | ML Kit face detection |
+| `POST_NOTIFICATIONS` | Push notification display |
+| `SEND_SMS` | Offline SOS via SMS |
+| `RECEIVE_BOOT_COMPLETED` | Auto-start on device boot |
 
 ---
 
 ## 🗺️ Roadmap
 
-### Phase 1 - Core (Current)
-- [x] Project scaffold & README
-- [x] Firebase Auth + Family group creation
-- [x] Real-time location sharing
-- [x] SOS alert system
-- [x] Crash & fall detection
-- [x] Geofencing / Safe zones
-- [x] Silent SOS & Panic Button
-- [x] Battery & signal alerts
-
-### Phase 2 - Intelligence
-- [ ] AI threat detection
-- [ ] Safety Score system
-- [ ] Weekly reports
-
-### Phase 3 - Connectivity
-- [ ] Mesh network fallback (Bluetooth)
-- [ ] Offline SMS via Mesh
-- [ ] Wi-Fi Direct SOS
-
-### Phase 4 - Polish
-- [ ] Route playback
-- [ ] In-app messaging
-- [ ] Live ETA
-- [ ] Voice triggered SOS
-
-### Release
-- [ ] Play Store release
-- [ ] Beta testing program
+| Phase | Status | Features |
+|-------|--------|----------|
+| Phase 1 — Core | ✅ Complete | SOS, Location, Crash Detection, Geofencing |
+| Phase 2 — Intelligence | 🔄 In Progress | AI Threat Detection, Safety Score |
+| Phase 3 — Connectivity | 📋 Planned | Bluetooth Mesh, Wi-Fi Direct |
+| Phase 4 — UX | 📋 Planned | Route Playback, Voice SOS, Widgets |
+| Phase 5 — Release | 📋 Planned | Beta Testing, Play Store |
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please read our contributing guidelines first.
-
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+2. Create a branch: `git checkout -b feature/your-feature`
+3. Make changes and commit
+4. Push: `git push origin feature/your-feature`
 5. Open a Pull Request
-
-For major changes, please open an issue first to discuss what you'd like to change.
-
----
-
-## 👨‍💻 Author
-
-**Karthik** — [@MKarthik730](https://github.com/MKarthik730)  
-B.Tech CSE | ANITS, Visakhapatnam  
-ML Enthusiast | Open Source Contributor
 
 ---
 
 ## 📄 License
 
-This project is licensed under the [MIT License](LICENSE) - see the LICENSE file for details.
+MIT License - See [LICENSE](LICENSE) file for details.
 
 ---
 
-<div align="center">
+## 👤 Contact
 
-Built with ❤️ for family safety
+**Karthik** — [@MKarthik730](https://github.com/MKarthik730)  
+B.Tech CSE | ANITS, Visakhapatnam
 
-</div>
+---
+
+*Built with ❤️ using Kotlin, Jetpack Compose, and Firebase*  
+*Your family. Protected. Always.*
