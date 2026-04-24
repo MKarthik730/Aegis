@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Aegis" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/aegis_blue</item>
+        <item name="android:navigationBarColor">@color/white</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <style name="Theme.Aegis.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/aegis_blue</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_notification</item>
+        <item name="postSplashScreenTheme">@style/Theme.Aegis</item>
+    </style>
+</resources>

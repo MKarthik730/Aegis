@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Aegis</string>
+    <string name="sos_button">SOS</string>
+    <string name="sos_alert">Send SOS Alert</string>
+    <string name="sos_confirm_message">This will alert all your emergency contacts with your live location.</string>
+    <string name="cancel">Cancel</string>
+    <string name="send">Send</string>
+    <string name="i_am_safe">I\'m Safe Now</string>
+    <string name="location_permission_required">Location permission is required for this feature</string>
+    <string name="tracking_notification_title">Aegis is protecting you</string>
+    <string name="tracking_notification_text">Location tracking is active</string>
+    <string name="detection_notification_title">Detection active</string>
+    <string name="detection_notification_text">Accident and fall detection is running</string>
+    <string name="zone_entered">Entered: %1$s</string>
+    <string name="zone_exited">Left safe zone: %1$s</string>
+    <string name="sos_sent">SOS Alert Sent</string>
+    <string name="sos_failed">SOS Failed</string>
+    <string name="no_contacts">No emergency contacts set</string>
+    <string name="mark_safe">Marked as Safe</string>
+</resources>
