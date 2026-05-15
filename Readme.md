@@ -113,28 +113,89 @@ Aegis is a production-ready Android application built with modern development pr
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Architecture & Workflow
 
+### SOS Emergency Flow
+
+```mermaid
+flowchart TD
+    A[User triggers SOS] --> B{Trigger Type}
+    B -->|Manual| C[Press SOS Button]
+    B -->|Auto Crash| D[Accelerometer > 3.5G]
+    B -->|Shake| E[5 shakes in 2s]
+    B -->|Volume Button| F[3x volume press]
+    B -->|Power Button| G[5x power press]
+    C & D & E & F & G --> H[30s Countdown]
+    H --> I{Cancelled?}
+    I -->|Yes| J[Alert cancelled]
+    I -->|No| K[Send SOS Alert]
+    K --> L{Firebase Reachable?}
+    L -->|Yes| M[Push to Firebase RTDB]
+    L -->|No| N[SMS Fallback]
+    M --> O[FCM Notification to Contacts]
+    N --> O
+    O --> P[Contacts receive alert]
+    P --> Q[Real-time location shared]
+    Q --> R[Await response]
+    R -->|Safe| S[Send "I'm Safe" notification]
+    R -->|Resolved| T[Mark alert RESOLVED]
 ```
-┌────────────────────────────────────────────────────────────┐
-│                         UI Layer                           │
-│   Screens (Compose)  │  ViewModels (StateFlow)  │  Nav    │
-└───────────────────────────────┬────────────────────────────┘
-                                │
-┌────────────────────────────────────────────────────────────┐
-│                      Domain Layer                          │
-│   Repositories  │  Models (Data)  │  Use Cases (Logic)     │
-└───────────────────────────────┬────────────���───────────────┘
-                                │
-┌────────────────────────────────────────────────────────────┐
-│                       Data Layer                           │
-│   Firebase (Auth/DB/Firestore/FCM)  │  Local (Room/DStore)│
-└───────────────────────────────┬────────────────────────────┘
-                                │
-┌────────────────────────────────────────────────────────────┐
-│                    Platform Layer                          │
-│   Services (Foreground)  │  Receivers  │  System APIs      │
-└────────────────────────────────────────────────────────────┘
+
+### Location Tracking Flow
+
+```mermaid
+flowchart TD
+    A[App Launched] --> B[Request Location Permissions]
+    B --> C{Permissions Granted?}
+    C -->|No| D[Show rationale & re-prompt]
+    C -->|Yes| E[Start Foreground Service]
+    E --> F[FusedLocationProvider]
+    F --> G{Active or Passive mode?}
+    G -->|Active| H[Every 5s / 3m delta]
+    G -->|Passive| I[Every 30s / 20m delta]
+    H & I --> J[New location received]
+    J --> K{Network Available?}
+    K -->|Yes| L[Sync to Firebase RTDB]
+    K -->|No| M[Queue in Room DB]
+    L --> N[Check Safe Zones]
+    M --> O[Flush queue when online]
+    N --> P{Entered/Exited zone?}
+    P -->|Entered| Q[Notify "Entered {zone}"]
+    P -->|Exited| R[Notify "Left safe zone"]
+    Q & R --> S[Update family members]
+    O --> S
+    S --> T{Planned route set?}
+    T -->|Yes| U[Check deviation > 200m]
+    U --> V[Alert if deviated]
+    T -->|No| W[Continue monitoring]
+    V & W --> J
+```
+
+### System Architecture
+
+```mermaid
+flowchart LR
+    subgraph UI["UI Layer (Jetpack Compose)"]
+        Screens[Compose Screens]
+        ViewModels[ViewModels + StateFlow]
+        Navigation[NavHost]
+    end
+    subgraph Domain["Domain Layer"]
+        Repos[Repositories]
+        Models[Data Models]
+    end
+    subgraph Data["Data Layer"]
+        Firebase[Firebase Auth/DB/Firestore/FCM]
+        Local[Room DB / DataStore]
+    end
+    subgraph Platform["Platform Layer"]
+        Services[Foreground Services]
+        Receivers[Broadcast Receivers]
+        System[System APIs]
+    end
+    UI --> Domain --> Data
+    Services --> System & Data
+    Receivers --> System
 ```
 
 ---
@@ -145,36 +206,46 @@ Aegis is a production-ready Android application built with modern development pr
 Aegis/
 ├── app/src/main/
 │   ├── java/com/karthik/aegis/
-│   │   ├── AegisApplication.kt     # Hilt Application entry point
-│   │   ├── di/AppModule.kt         # Dependency Injection
-│   │   ├── model/Models.kt         # Data models
-│   │   ├── repository/             # Repositories
+│   │   ├── AegisApplication.kt         # Hilt Application entry point
+│   │   ├── di/AppModule.kt             # Dependency Injection (Hilt + Room)
+│   │   ├── model/Models.kt             # Data models with Room entities
+│   │   ├── data/
+│   │   │   └── local/
+│   │   │       ├── AppDatabase.kt      # Room database definition
+│   │   │       └── dao/
+│   │   │           ├── OfflineLocationDao.kt
+│   │   │           ├── AlertHistoryDao.kt
+│   │   │           └── SafetyScoreDao.kt
+│   │   ├── repository/                 # Repositories
 │   │   │   ├── SOSRepository.kt
 │   │   │   ├── ContactsRepository.kt
 │   │   │   ├── FamilyRepository.kt
 │   │   │   ├── LocationRepository.kt
 │   │   │   └── ZoneRepository.kt
-│   │   ├── service/                # Background services
+│   │   ├── service/                    # Background services
 │   │   │   ├── LocationTrackingService.kt
 │   │   │   ├── AccidentDetectorService.kt
 │   │   │   ├── SOSBroadcastReceiver.kt
 │   │   │   ├── BootReceiver.kt
 │   │   │   └── AegisFirebaseMessagingService.kt
-│   │   ├── ui/                     # User interface
+│   │   ├── ui/                         # User interface
 │   │   │   ├── MainActivity.kt
 │   │   │   ├── navigation/NavHost.kt
 │   │   │   ├── splash/SplashScreen.kt
 │   │   │   ├── auth/AuthScreen.kt
-│   │   │   ├���─ home/HomeScreen.kt
+│   │   │   ├── home/HomeScreen.kt
+│   │   │   ├── contacts/
+│   │   │   │   ├── ContactsScreen.kt
+│   │   │   │   └── ContactsViewModel.kt
 │   │   │   └── theme/Theme.kt
-│   │   └── utils/                  # Utilities
+│   │   └── utils/                      # Utilities
 │   │       ├── AegisPrefs.kt
 │   │       ├── DistanceUtils.kt
 │   │       └── NotificationUtils.kt
-│   ├── res/                        # Android resources
+│   ├── res/                            # Android resources
 │   └── AndroidManifest.xml
-├── build.gradle.kts               # Root build configuration
-├── settings.gradle.kts            # Project settings
+├── build.gradle.kts                   # Root build configuration
+├── settings.gradle.kts                # Project settings
 └── README.md
 ```
 
