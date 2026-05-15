@@ -1,3 +1,5 @@
+# 🛡️ Aegis
+### Real-time Family Safety & Emergency Response Platform
 <div align="center">
 
 <img src="https://img.shields.io/badge/-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white"/>
@@ -7,8 +9,6 @@
 <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge"/>
 <img src="https://img.shields.io/badge/minSdk-26-green?style=for-the-badge"/>
 
-# 🛡️ Aegis
-### Real-time Family Safety & Emergency Response Platform
 
 *Your family. Protected. Always.*
 
