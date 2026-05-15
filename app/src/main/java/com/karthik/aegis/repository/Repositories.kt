@@ -2,6 +2,7 @@ package com.karthik.aegis.repository
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
+import com.karthik.aegis.data.local.dao.OfflineLocationDao
 import com.karthik.aegis.model.FamilyMember
 import com.karthik.aegis.model.SafeZone
 import com.karthik.aegis.model.TrackedLocation
@@ -13,7 +14,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class LocationRepository @Inject constructor() {
+class LocationRepository @Inject constructor(
+    private val offlineLocationDao: OfflineLocationDao
+) {
 
     private val auth = FirebaseAuth.getInstance()
     private val database = FirebaseDatabase.getInstance().reference
@@ -39,14 +42,24 @@ class LocationRepository @Inject constructor() {
         awaitClose { listener.remove() }
     }
 
-    suspend fun flushOfflineQueue(uid: String) {
-        // Room DB queue flush would happen here
-        // For now, this is a placeholder
+    suspend fun queueOfflineLocation(location: TrackedLocation) {
+        offlineLocationDao.insert(location)
     }
 
-    suspend fun queueOfflineLocation(location: TrackedLocation) {
-        // Room DB queue insert would happen here
-        // For now, this is a placeholder
+    suspend fun flushOfflineQueue(uid: String) {
+        val pending = offlineLocationDao.getPendingLocations(uid)
+        if (pending.isEmpty()) return
+        val ids = pending.map { it.id }
+        try {
+            val updates = hashMapOf<String, Any>()
+            pending.forEach { loc ->
+                updates["live_locations/$uid"] = loc
+            }
+            database.updateChildren(updates).await()
+            offlineLocationDao.deleteByIds(ids)
+        } catch (e: Exception) {
+            throw e
+        }
     }
 
     fun observeFamilyLocations(groupId: String): Flow<Map<String, TrackedLocation>> = callbackFlow {
