@@ -9,6 +9,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.karthik.aegis.ui.auth.AuthScreen
 import com.karthik.aegis.ui.auth.AuthViewModel
+import com.karthik.aegis.ui.contacts.ContactsScreen
+import com.karthik.aegis.ui.contacts.ContactsViewModel
 import com.karthik.aegis.ui.home.HomeScreen
 import com.karthik.aegis.ui.home.HomeViewModel
 import com.karthik.aegis.ui.splash.SplashScreen
@@ -77,7 +79,11 @@ fun AegisNavHost(navController: NavHostController) {
         }
 
         composable(Screen.Contacts.route) {
-            // Contacts Screen
+            val viewModel: ContactsViewModel = hiltViewModel()
+            ContactsScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
         composable(Screen.Zones.route) {
