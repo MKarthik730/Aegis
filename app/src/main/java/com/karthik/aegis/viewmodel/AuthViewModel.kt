@@ -3,6 +3,7 @@ package com.karthik.aegis.ui.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -51,7 +52,7 @@ class AuthViewModel @Inject constructor() : ViewModel() {
             .setTimeout(60L, TimeUnit.SECONDS)
             .setActivity(context as android.app.Activity)
             .setCallbacks(object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
-                override fun onVerificationCompleted(credential: PhoneAuthProvider.VerificationCriteria) {
+                override fun onVerificationCompleted(credential: PhoneAuthCredential) {
                     _authState.value = AuthState.CodeSent
                 }
 

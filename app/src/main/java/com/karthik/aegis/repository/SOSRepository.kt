@@ -23,6 +23,8 @@ class SOSRepository @Inject constructor() {
         contacts: List<EmergencyContact>,
         reason: String,
         isAutomatic: Boolean,
+        latitude: Double = 0.0,
+        longitude: Double = 0.0,
         onSuccess: () -> Unit,
         onFailure: (String) -> Unit
     ) {
@@ -36,8 +38,8 @@ class SOSRepository @Inject constructor() {
                 "uid"          to uid,
                 "senderName"   to auth.currentUser?.displayName ?: "Family Member",
                 "senderUid"    to uid,
-                "latitude"     to 0.0, // Will be filled by service
-                "longitude"    to 0.0,
+                "latitude"     to latitude,
+                "longitude"    to longitude,
                 "reason"       to reason,
                 "isAutomatic"  to isAutomatic,
                 "status"       to "ACTIVE",

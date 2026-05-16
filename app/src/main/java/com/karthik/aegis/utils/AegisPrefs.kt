@@ -54,14 +54,26 @@ class AegisPrefs @Inject constructor(
         private val KEY_ONBOARDING_COMPLETE  = booleanPreferencesKey("onboarding_complete")
     }
 
-    // ── Feature Toggles ───────────────────────────────────────────────────────
+    // ── Feature Toggles (synchronous — for services/receivers) ────────────────
 
-    fun isLocationTrackingEnabled()  = ds.data.map { it[KEY_LOCATION_TRACKING] ?: true }
-    fun isAccidentDetectionEnabled() = ds.data.map { it[KEY_ACCIDENT_DETECTION] ?: true }
-    fun isFatigueDetectionEnabled()  = ds.data.map { it[KEY_FATIGUE_DETECTION] ?: true }
-    fun isZoneNotificationsEnabled() = ds.data.map { it[KEY_ZONE_NOTIFICATIONS] ?: true }
-    fun isZoneExitNotificationsEnabled() = ds.data.map { it[KEY_ZONE_EXIT_ALERTS] ?: true }
-    fun isNightModeSensitivityEnabled()  = ds.data.map { it[KEY_NIGHT_MODE_SENSITIVITY] ?: false }
+    fun isLocationTrackingEnabled(): Boolean = runBlocking {
+        ds.data.first()[KEY_LOCATION_TRACKING] ?: true
+    }
+    fun isAccidentDetectionEnabled(): Boolean = runBlocking {
+        ds.data.first()[KEY_ACCIDENT_DETECTION] ?: true
+    }
+    fun isFatigueDetectionEnabled(): Boolean = runBlocking {
+        ds.data.first()[KEY_FATIGUE_DETECTION] ?: true
+    }
+    fun isZoneNotificationsEnabled(): Boolean = runBlocking {
+        ds.data.first()[KEY_ZONE_NOTIFICATIONS] ?: true
+    }
+    fun isZoneExitNotificationsEnabled(): Boolean = runBlocking {
+        ds.data.first()[KEY_ZONE_EXIT_ALERTS] ?: true
+    }
+    fun isNightModeSensitivityEnabled(): Boolean = runBlocking {
+        ds.data.first()[KEY_NIGHT_MODE_SENSITIVITY] ?: false
+    }
 
     fun getHomeWifiSSID(): String? = runBlocking {
         ds.data.first()[KEY_HOME_WIFI_SSID]
@@ -86,6 +98,13 @@ class AegisPrefs @Inject constructor(
     fun isOnboardingComplete(): Boolean = runBlocking {
         ds.data.first()[KEY_ONBOARDING_COMPLETE] ?: false
     }
+
+    // ── Reactive observation (for Compose/ViewModel) ──────────────────────────
+
+    fun observeLocationTrackingEnabled() = ds.data.map { it[KEY_LOCATION_TRACKING] ?: true }
+    fun observeAccidentDetectionEnabled() = ds.data.map { it[KEY_ACCIDENT_DETECTION] ?: true }
+    fun observeFatigueDetectionEnabled() = ds.data.map { it[KEY_FATIGUE_DETECTION] ?: true }
+    fun observeZoneNotificationsEnabled() = ds.data.map { it[KEY_ZONE_NOTIFICATIONS] ?: true }
 
     // ── Setters ───────────────────────────────────────────────────────────────
 
@@ -141,6 +160,17 @@ class AegisPrefs @Inject constructor(
 
     suspend fun setShakeSOSEnabled(enabled: Boolean) {
         ds.edit { it[KEY_SHAKE_SOS_ENABLED] = enabled }
+    }
+
+    suspend fun setFcmToken(token: String?) {
+        ds.edit {
+            if (token != null) it[KEY_FCM_TOKEN] = token
+            else it.remove(KEY_FCM_TOKEN)
+        }
+    }
+
+    fun getFcmToken(): String? = runBlocking {
+        ds.data.first()[KEY_FCM_TOKEN]
     }
 
     suspend fun clearAll() {
