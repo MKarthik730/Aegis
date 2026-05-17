@@ -12,6 +12,8 @@ import com.karthik.aegis.ui.auth.AuthViewModel
 import com.karthik.aegis.ui.contacts.ContactsScreen
 import com.karthik.aegis.ui.contacts.ContactsViewModel
 import com.karthik.aegis.ui.home.HomeScreen
+import com.karthik.aegis.ui.sos.SOSScreen
+import com.karthik.aegis.ui.sos.SOSViewModel
 import com.karthik.aegis.ui.home.HomeViewModel
 import com.karthik.aegis.ui.splash.SplashScreen
 import com.karthik.aegis.ui.splash.SplashViewModel
@@ -75,7 +77,11 @@ fun AegisNavHost(navController: NavHostController) {
         }
 
         composable(Screen.SOS.route) {
-            // SOS Screen
+            val viewModel: SOSViewModel = hiltViewModel()
+            SOSScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
         composable(Screen.Contacts.route) {
