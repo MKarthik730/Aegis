@@ -41,8 +41,8 @@ fun HomeScreen(
                 title = { Text("Aegis • Family Safety") },
                 actions = {
                     IconButton(onClick = onSignOut) {
-                        // Corrected LogOut to Logout
-                        Icon(Icons.Default.Logout, "Sign Out")
+                        // Fixed: LogOut changed to Logout (or ExitToApp)
+                        Icon(Icons.Default.ExitToApp, "Sign Out")
                     }
                 }
             )
@@ -159,7 +159,7 @@ fun HomeScreen(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
-                                // Changed PersonAdd to Person to ensure compatibility if index is stale
+                                // Fixed: PersonAdd changed to Person
                                 Icons.Default.Person,
                                 "No members",
                                 modifier = Modifier.size(48.dp),
