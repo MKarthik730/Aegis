@@ -1,7 +1,10 @@
 package com.karthik.aegis.repository
 
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 import com.google.firebase.firestore.FirebaseFirestore
 import com.karthik.aegis.model.EmergencyContact
 import com.karthik.aegis.model.SOSAlert
@@ -36,7 +39,7 @@ class SOSRepository @Inject constructor() {
         try {
             val alert = mapOf(
                 "uid"          to uid,
-                "senderName"   to auth.currentUser?.displayName ?: "Family Member",
+                "senderName"   to (auth.currentUser?.displayName ?: "Family Member"),
                 "senderUid"    to uid,
                 "latitude"     to latitude,
                 "longitude"    to longitude,
@@ -48,14 +51,16 @@ class SOSRepository @Inject constructor() {
 
             realtimeDb.child("sos_alerts").child(uid).setValue(alert).await()
 
-            // Queue FCM notifications
+            // Queue FCM notifications via Firestore
             val fcmData = mapOf(
                 "title"     to "🆘 SOS Alert!",
                 "body"      to "$reason — ${auth.currentUser?.displayName ?: "Family Member"} needs help!",
-                "tokens"    to contacts.map { it.fcmToken },
+                "tokens"    to contacts.map { it.fcmToken }.filter { it.isNotEmpty() },
                 "alertUid"  to uid
             )
-            firestore.collection("fcm_queue").add(fcmData).await()
+            if (contacts.any { it.fcmToken.isNotEmpty() }) {
+                firestore.collection("fcm_queue").add(fcmData).await()
+            }
 
             onSuccess()
         } catch (e: Exception) {
@@ -69,10 +74,13 @@ class SOSRepository @Inject constructor() {
 
     suspend fun sendSafeNotification(contacts: List<EmergencyContact>) {
         try {
+            val tokens = contacts.map { it.fcmToken }.filter { it.isNotEmpty() }
+            if (tokens.isEmpty()) return
+            
             val fcmData = mapOf(
                 "title" to "✅ All Clear",
                 "body" to "${auth.currentUser?.displayName ?: "Family Member"} is safe now",
-                "tokens" to contacts.map { it.fcmToken }
+                "tokens" to tokens
             )
             firestore.collection("fcm_queue").add(fcmData).await()
         } catch (e: Exception) { /* ignore */ }
@@ -80,25 +88,25 @@ class SOSRepository @Inject constructor() {
 
     suspend fun sendZoneExitNotification(contacts: List<EmergencyContact>, zoneName: String) {
         try {
+            val tokens = contacts.map { it.fcmToken }.filter { it.isNotEmpty() }
+            if (tokens.isEmpty()) return
+
             val fcmData = mapOf(
                 "title" to "⚠️ Zone Alert",
                 "body" to "${auth.currentUser?.displayName ?: "User"} left $zoneName",
-                "tokens" to contacts.map { it.fcmToken }
+                "tokens" to tokens
             )
             firestore.collection("fcm_queue").add(fcmData).await()
         } catch (e: Exception) { /* ignore */ }
     }
 
     fun observeSOSAlerts(familyGroupId: String): Flow<List<SOSAlert>> = callbackFlow {
-        val listener = realtimeDb.child("sos_alerts")
-            .orderByChild("timestamp")
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    close(error)
-                    return@addSnapshotListener
-                }
-
-                val alerts = snapshot?.children?.mapNotNull {
+        val ref = realtimeDb.child("sos_alerts")
+        val query = ref.orderByChild("timestamp")
+        
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val alerts = snapshot.children.mapNotNull {
                     SOSAlert(
                         uid = it.child("uid").getValue(String::class.java) ?: "",
                         senderName = it.child("senderName").getValue(String::class.java) ?: "",
@@ -109,11 +117,16 @@ class SOSRepository @Inject constructor() {
                         status = it.child("status").getValue(String::class.java) ?: "ACTIVE",
                         timestamp = it.child("timestamp").getValue(Long::class.java) ?: 0L
                     )
-                } ?: emptyList()
-
+                }
                 trySend(alerts)
             }
 
-        awaitClose { listener.remove() }
+            override fun onCancelled(error: DatabaseError) {
+                close(error.toException())
+            }
+        }
+
+        query.addValueEventListener(listener)
+        awaitClose { query.removeEventListener(listener) }
     }
 }

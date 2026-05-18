@@ -1,353 +1,299 @@
 package com.karthik.aegis.ui.sos
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.karthik.aegis.model.SOSAlert
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SOSScreen(
-    viewModel: SOSViewModel,
+    uiState: SOSUiState,
+    activeAlerts: List<SOSAlert>,
+    onTriggerSOS: (String) -> Unit,
+    onResolveSOS: (String) -> Unit,
+    onSendSafe: () -> Unit,
     onNavigateBack: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    var selectedReason by remember { mutableStateOf("") }
+    var showReasonDialog by remember { mutableStateOf(false) }
+
+    val sosReasons = listOf(
+        "Accident/Crash",
+        "Fall/Injury",
+        "Medical Emergency",
+        "Personal Safety",
+        "General Emergency",
+        "Other"
+    )
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("SOS Emergency") },
+                title = { Text("Emergency SOS") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, "Back")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
-                )
+                }
             )
         }
-    ) { padding ->
-        Box(
+    ) { paddingValues ->
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
-            contentAlignment = Alignment.Center
+                .padding(paddingValues)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            when (val phase = uiState.phase) {
-                is SOSPhase.Idle -> IdleContent(onSosClick = viewModel::requestConfirmation)
-                is SOSPhase.Confirming -> IdleContent(onSosClick = viewModel::requestConfirmation)
-                is SOSPhase.Countdown -> CountdownContent(
-                    secondsLeft = phase.secondsLeft,
-                    onCancel = viewModel::cancelCountdown
-                )
-                is SOSPhase.Active -> ActiveContent(
-                    onSafeSignal = viewModel::sendSafeSignal,
-                    isLoading = uiState.isLoading
-                )
-                is SOSPhase.Resolved -> ResolvedContent(onDone = onNavigateBack)
+            // SOS Trigger Section
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            Icons.Default.Warning,
+                            "SOS",
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            "EMERGENCY SOS",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.error
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text(
+                            "Send alert to all emergency contacts",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
             }
 
-            uiState.error?.let { error ->
-                Snackbar(
+            // Reason Selection
+            item {
+                OutlinedButton(
+                    onClick = { showReasonDialog = true },
                     modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(16.dp),
-                    action = {
-                        TextButton(onClick = viewModel::clearError) {
-                            Text("Dismiss")
-                        }
-                    }
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (selectedReason.isNotEmpty()) 
+                            MaterialTheme.colorScheme.primaryContainer 
+                        else 
+                            Color.Transparent
+                    )
                 ) {
-                    Text(error)
+                    Icon(Icons.Default.Edit, "Select Reason", modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(selectedReason.ifEmpty { "Select Reason..." })
+                }
+
+                if (showReasonDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showReasonDialog = false },
+                        title = { Text("Select SOS Reason") },
+                        text = {
+                            LazyColumn {
+                                items(sosReasons) { reason ->
+                                    TextButton(
+                                        onClick = {
+                                            selectedReason = reason
+                                            showReasonDialog = false
+                                        },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(reason, modifier = Modifier.fillMaxWidth())
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { showReasonDialog = false }) {
+                                Text("Cancel")
+                            }
+                        }
+                    )
+                }
+            }
+
+            // Trigger SOS Button
+            item {
+                Button(
+                    onClick = {
+                        val reason = selectedReason.ifEmpty { "Emergency SOS" }
+                        onTriggerSOS(reason)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    enabled = !uiState.isLoading
+                ) {
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    } else {
+                        Icon(Icons.Default.SosOutline, "Trigger", modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("TRIGGER SOS", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            // Safe Notification
+            item {
+                Button(
+                    onClick = onSendSafe,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                ) {
+                    Icon(Icons.Default.CheckCircle, "Safe", modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("I'm Safe Now", fontWeight = FontWeight.Bold)
+                }
+            }
+
+            // Status Messages
+            uiState.message?.let {
+                item {
+                    Surface(
+                        color = Color(0xFF4CAF50).copy(alpha = 0.1f),
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Text(
+                            it,
+                            modifier = Modifier.padding(12.dp),
+                            color = Color(0xFF4CAF50),
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+
+            uiState.error?.let {
+                item {
+                    Surface(
+                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Text(
+                            it,
+                            modifier = Modifier.padding(12.dp),
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+
+            // Active Alerts
+            if (activeAlerts.isNotEmpty()) {
+                item {
+                    Text(
+                        "Active Alerts (${activeAlerts.size})",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                items(activeAlerts) { alert ->
+                    SOSAlertCard(alert, onResolve = { onResolveSOS(alert.uid) })
                 }
             }
         }
     }
+}
 
-    if (uiState.phase is SOSPhase.Confirming && uiState.contacts.isNotEmpty()) {
-        AlertDialog(
-            onDismissRequest = viewModel::cancelConfirmation,
-            icon = {
-                Icon(
-                    Icons.Default.Warning,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(32.dp)
-                )
-            },
-            title = { Text("Send SOS Alert?") },
-            text = {
-                Text("This will alert ${uiState.contacts.size} emergency contact(s) with your live location. A 30-second countdown will begin.")
-            },
-            confirmButton = {
-                Button(
-                    onClick = { viewModel.startCountdown() },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text("Start SOS", color = Color.White)
-                }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = viewModel::cancelConfirmation) {
-                    Text("Cancel")
-                }
+@Composable
+private fun SOSAlertCard(alert: SOSAlert, onResolve: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = when (alert.status) {
+                "ACTIVE" -> MaterialTheme.colorScheme.errorContainer
+                "RESOLVED" -> Color(0xFF4CAF50).copy(alpha = 0.2f)
+                else -> MaterialTheme.colorScheme.surfaceVariant
             }
-        )
-    }
-}
-
-@Composable
-private fun IdleContent(onSosClick: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxSize()
-    ) {
-        Text(
-            text = "Tap the button to send an SOS",
-            fontSize = 16.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.height(24.dp))
-        SOSButton(onClick = onSosClick)
-        Spacer(Modifier.height(24.dp))
-        Text(
-            text = "Your emergency contacts will be notified\nwith your current location",
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            lineHeight = 20.sp
-        )
-    }
-}
-
-@Composable
-private fun SOSButton(onClick: () -> Unit) {
-    var pressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.9f else 1f,
-        label = "sos_scale"
-    )
-
-    Button(
-        onClick = {
-            pressed = true
-            onClick()
-        },
-        modifier = Modifier
-            .size(180.dp)
-            .scale(scale),
-        shape = CircleShape,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.error,
-            contentColor = Color.White
-        ),
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 8.dp,
-            pressedElevation = 4.dp
         )
     ) {
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                Icons.Default.Warning,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp)
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "SOS",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-    }
-}
-
-@Composable
-private fun CountdownContent(
-    secondsLeft: Int,
-    onCancel: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxSize()
-    ) {
-        Text(
-            text = "SOS will be sent in",
-            fontSize = 18.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(Modifier.height(16.dp))
-        Box(
-            modifier = Modifier
-                .size(200.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.errorContainer),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "$secondsLeft",
-                    fontSize = 72.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.error
-                )
-                Text(
-                    text = "seconds",
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onErrorContainer
-                )
-            }
-        }
-        Spacer(Modifier.height(32.dp))
-        Button(
-            onClick = onCancel,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-            ),
-            modifier = Modifier.height(56.dp)
-        ) {
-            Icon(Icons.Default.Close, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("Cancel SOS", fontSize = 18.sp)
-        }
-    }
-}
-
-@Composable
-private fun ActiveContent(
-    onSafeSignal: () -> Unit,
-    isLoading: Boolean
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxSize().padding(32.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.error),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                Icons.Default.Warning,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = Color.White
-            )
-        }
-        Spacer(Modifier.height(24.dp))
-        Text(
-            text = "SOS Alert Active",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.error
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = "Your emergency contacts have been notified\nand can see your live location",
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.height(48.dp))
-        Button(
-            onClick = onSafeSignal,
-            enabled = !isLoading,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.secondary
-            ),
-            shape = RoundedCornerShape(28.dp)
+                .padding(12.dp)
         ) {
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = MaterialTheme.colorScheme.onSecondary,
-                    strokeWidth = 2.dp
-                )
-            } else {
-                Icon(Icons.Default.CheckCircle, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("I'm Safe", fontSize = 18.sp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        alert.senderName,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        alert.reason,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                    Text(
+                        SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(alert.timestamp)),
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+
+                if (alert.status == "ACTIVE") {
+                    Button(
+                        onClick = onResolve,
+                        modifier = Modifier.height(36.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                    ) {
+                        Text("Resolved", fontSize = 12.sp)
+                    }
+                }
             }
         }
     }
 }
 
+// Icon that may not exist, fallback
 @Composable
-private fun ResolvedContent(onDone: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxSize().padding(32.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondaryContainer),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                Icons.Default.CheckCircle,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.secondary
-            )
-        }
-        Spacer(Modifier.height(24.dp))
-        Text(
-            text = "You're Safe",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.secondary
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = "Your family has been notified that you're safe",
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.height(48.dp))
-        Button(
-            onClick = onDone,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            shape = RoundedCornerShape(28.dp)
-        ) {
-            Text("Back to Home", fontSize = 18.sp)
-        }
-    }
+private fun SosOutlineIcon() {
+    Icon(Icons.Default.Warning, "SOS")
 }

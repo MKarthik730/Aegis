@@ -1,34 +1,31 @@
 package com.karthik.aegis.ui.contacts
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.karthik.aegis.model.EmergencyContact
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContactsScreen(
-    viewModel: ContactsViewModel,
+    contacts: List<EmergencyContact>,
+    uiState: ContactsUiState,
+    onAddContact: (EmergencyContact) -> Unit,
+    onRemoveContact: (String) -> Unit,
+    onUpdateContact: (EmergencyContact) -> Unit,
     onNavigateBack: () -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    var showAddSheet by remember { mutableStateOf(false) }
+    var showAddDialog by remember { mutableStateOf(false) }
     var editingContact by remember { mutableStateOf<EmergencyContact?>(null) }
 
     Scaffold(
@@ -37,336 +34,277 @@ fun ContactsScreen(
                 title = { Text("Emergency Contacts") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = Color.White,
-                    navigationIconContentColor = Color.White
-                )
-            )
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { showAddSheet = true },
-                icon = { Icon(Icons.Default.PersonAdd, contentDescription = null) },
-                text = { Text("Add Contact") },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = Color.White
+                actions = {
+                    IconButton(onClick = { showAddDialog = true }) {
+                        Icon(Icons.Default.Add, "Add Contact")
+                    }
+                }
             )
         }
-    ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            when {
-                uiState.isLoading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                }
-
-                uiState.contacts.isEmpty() -> {
-                    Column(
-                        modifier = Modifier.align(Alignment.Center).padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Error Message
+            uiState.error?.let {
+                item {
+                    Surface(
+                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
+                        shape = MaterialTheme.shapes.small
                     ) {
-                        Icon(
-                            Icons.Default.ContactEmergency,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(16.dp))
                         Text(
-                            "No emergency contacts yet",
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 18.sp
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "Add contacts who will be notified in an emergency",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 14.sp
+                            it,
+                            modifier = Modifier.padding(12.dp),
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp
                         )
                     }
                 }
+            }
 
-                else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+            // Contacts List
+            if (contacts.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        items(
-                            items = uiState.contacts,
-                            key = { it.id }
-                        ) { contact ->
-                            ContactItem(
-                                contact = contact,
-                                onEdit = { editingContact = it },
-                                onDelete = { viewModel.deleteContact(it.id) }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.Person,
+                                "No contacts",
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.outline
                             )
+                            Text(
+                                "No emergency contacts",
+                                modifier = Modifier.padding(top = 12.dp)
+                            )
+                            TextButton(onClick = { showAddDialog = true }) {
+                                Text("Add One Now")
+                            }
                         }
                     }
                 }
-            }
-
-            uiState.error?.let { error ->
-                Snackbar(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(16.dp),
-                    action = {
-                        TextButton(onClick = viewModel::clearError) {
-                            Text("Dismiss")
-                        }
-                    }
-                ) {
-                    Text(error)
+            } else {
+                items(contacts) { contact ->
+                    ContactCard(
+                        contact = contact,
+                        onEdit = { editingContact = it },
+                        onDelete = { onRemoveContact(it) }
+                    )
                 }
             }
         }
     }
 
-    if (showAddSheet) {
-        ContactFormSheet(
-            contact = null,
-            onDismiss = { showAddSheet = false },
-            onSave = { contact ->
-                viewModel.addContact(contact)
-                showAddSheet = false
-            }
-        )
-    }
-
-    editingContact?.let { contact ->
-        ContactFormSheet(
-            contact = contact,
-            onDismiss = { editingContact = null },
-            onSave = { updated ->
-                viewModel.updateContact(updated)
+    // Add/Edit Dialog
+    if (showAddDialog || editingContact != null) {
+        ContactDialog(
+            contact = editingContact,
+            onConfirm = { contact ->
+                if (editingContact != null) {
+                    onUpdateContact(contact)
+                    editingContact = null
+                } else {
+                    onAddContact(contact)
+                }
+                showAddDialog = false
+            },
+            onDismiss = {
+                showAddDialog = false
                 editingContact = null
             }
         )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ContactItem(
+private fun ContactCard(
     contact: EmergencyContact,
     onEdit: (EmergencyContact) -> Unit,
-    onDelete: (EmergencyContact) -> Unit
+    onDelete: (String) -> Unit
 ) {
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) {
-                onDelete(contact)
-                true
-            } else false
-        }
-    )
-
-    SwipeToDismissBox(
-        state = dismissState,
-        backgroundContent = {
-            val color by animateColorAsState(
-                targetValue = MaterialTheme.colorScheme.errorContainer,
-                label = "swipe_bg"
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(color, RoundedCornerShape(12.dp))
-                    .padding(horizontal = 24.dp),
-                contentAlignment = Alignment.CenterEnd
-            ) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.onErrorContainer
-                )
-            }
-        },
-        enableDismissFromStartToEnd = false
+    Card(
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Card(
-            onClick = { onEdit(contact) },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+            // Avatar
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                color = if (contact.isPrimary) 
+                    MaterialTheme.colorScheme.primary 
+                else 
+                    MaterialTheme.colorScheme.surfaceVariant
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    modifier = Modifier.size(40.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = contact.name.take(2).uppercase(),
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        contact.name.firstOrNull()?.toString() ?: "?",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
-                Spacer(Modifier.width(16.dp))
-                Column(modifier = Modifier.weight(1f)) {
+            }
+
+            // Contact Info
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = contact.name,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp
-                    )
-                    Text(
-                        text = contact.phone,
+                        contact.name,
                         fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        fontWeight = FontWeight.Bold
                     )
-                    Spacer(Modifier.height(4.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        SuggestionChip(
-                            onClick = {},
-                            label = { Text(contact.relation, fontSize = 11.sp) }
-                        )
-                        if (contact.isPrimary) {
-                            SuggestionChip(
-                                onClick = {},
-                                label = { Text("Primary", fontSize = 11.sp) },
-                                icon = {
-                                    Icon(
-                                        Icons.Default.Star,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                }
+
+                    if (contact.isPrimary) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = MaterialTheme.shapes.small
+                        ) {
+                            Text(
+                                "Primary",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                modifier = Modifier.padding(4.dp, 2.dp)
                             )
                         }
                     }
                 }
-                IconButton(onClick = { onEdit(contact) }) {
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = "Edit",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+
+                Text(
+                    contact.phone,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.outline
+                )
+
+                contact.relation.takeIf { it.isNotEmpty() }?.let {
+                    Text(
+                        "Relation: $it",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.outline
                     )
                 }
+            }
+
+            // Actions
+            IconButton(
+                onClick = { onEdit(contact) }
+            ) {
+                Icon(Icons.Default.Edit, "Edit")
+            }
+
+            IconButton(
+                onClick = { onDelete(contact.id) }
+            ) {
+                Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ContactFormSheet(
+private fun ContactDialog(
     contact: EmergencyContact?,
-    onDismiss: () -> Unit,
-    onSave: (EmergencyContact) -> Unit
+    onConfirm: (EmergencyContact) -> Unit,
+    onDismiss: () -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState()
-    val scope = rememberCoroutineScope()
-
     var name by remember { mutableStateOf(contact?.name ?: "") }
     var phone by remember { mutableStateOf(contact?.phone ?: "") }
     var relation by remember { mutableStateOf(contact?.relation ?: "") }
     var isPrimary by remember { mutableStateOf(contact?.isPrimary ?: false) }
-    var fcmToken by remember { mutableStateOf(contact?.fcmToken ?: "") }
 
-    val relationOptions = listOf("Spouse", "Parent", "Sibling", "Friend", "Guardian", "Other")
-
-    ModalBottomSheet(
+    AlertDialog(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Text(
-                text = if (contact == null) "Add Emergency Contact" else "Edit Contact",
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp
-            )
-
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Name") },
-                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-
-            OutlinedTextField(
-                value = phone,
-                onValueChange = { phone = it },
-                label = { Text("Phone Number") },
-                leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-
-            Text("Relation", fontWeight = FontWeight.Medium, fontSize = 14.sp)
-            RelationChips(
-                options = relationOptions,
-                selected = relation,
-                onSelect = { relation = it }
-            )
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+        title = { Text(if (contact != null) "Edit Contact" else "Add Contact") },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Checkbox(
-                    checked = isPrimary,
-                    onCheckedChange = { isPrimary = it }
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
                 )
-                Spacer(Modifier.width(8.dp))
-                Text("Set as primary emergency contact")
-            }
 
-            Button(
-                onClick = {
-                    val id = contact?.id ?: ""
-                    val savedContact = EmergencyContact(
-                        id = id,
-                        name = name,
-                        phone = phone,
-                        relation = relation,
-                        isPrimary = isPrimary,
-                        fcmToken = fcmToken
+                OutlinedTextField(
+                    value = phone,
+                    onValueChange = { phone = it },
+                    label = { Text("Phone Number") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = relation,
+                    onValueChange = { relation = it },
+                    label = { Text("Relation") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Checkbox(
+                        checked = isPrimary,
+                        onCheckedChange = { isPrimary = it }
                     )
-                    onSave(savedContact)
-                    scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = name.isNotBlank() && phone.isNotBlank()
+                    Text("Set as Primary Contact", fontSize = 12.sp)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (name.isNotEmpty() && phone.isNotEmpty()) {
+                        onConfirm(
+                            EmergencyContact(
+                                id = contact?.id ?: "",
+                                name = name,
+                                phone = phone,
+                                relation = relation,
+                                isPrimary = isPrimary,
+                                fcmToken = contact?.fcmToken ?: ""
+                            )
+                        )
+                    }
+                }
             ) {
-                Text(if (contact == null) "Add Contact" else "Save Changes")
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
             }
         }
-    }
-}
-
-@Composable
-private fun RelationChips(
-    options: List<String>,
-    selected: String,
-    onSelect: (String) -> Unit
-) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        options.forEach { option ->
-            FilterChip(
-                selected = option == selected,
-                onClick = { onSelect(option) },
-                label = { Text(option, fontSize = 12.sp) }
-            )
-        }
-    }
+    )
 }

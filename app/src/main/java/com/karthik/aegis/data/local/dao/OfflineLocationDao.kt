@@ -1,29 +1,25 @@
 package com.karthik.aegis.data.local.dao
 
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
+import androidx.room.*
 import com.karthik.aegis.model.TrackedLocation
 
 @Dao
 interface OfflineLocationDao {
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(location: TrackedLocation)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(locations: List<TrackedLocation>)
+    @Delete
+    suspend fun delete(location: TrackedLocation)
 
-    @Query("SELECT * FROM tracked_locations WHERE uid = :uid ORDER BY timestamp ASC")
-    suspend fun getPendingLocations(uid: String): List<TrackedLocation>
+    @Query("SELECT * FROM tracked_locations WHERE uid = :uid ORDER BY timestamp DESC")
+    suspend fun getAllByUid(uid: String): List<TrackedLocation>
 
-    @Query("DELETE FROM tracked_locations WHERE id IN (:ids)")
-    suspend fun deleteByIds(ids: List<Long>)
+    @Query("SELECT * FROM tracked_locations ORDER BY timestamp DESC LIMIT 1")
+    suspend fun getLatest(): TrackedLocation?
 
-    @Query("DELETE FROM tracked_locations WHERE uid = :uid")
-    suspend fun deleteAllForUser(uid: String)
+    @Query("DELETE FROM tracked_locations WHERE timestamp < :beforeTime")
+    suspend fun deleteOlderThan(beforeTime: Long)
 
     @Query("SELECT COUNT(*) FROM tracked_locations WHERE uid = :uid")
-    suspend fun countPending(uid: String): Int
+    suspend fun countByUid(uid: String): Int
 }

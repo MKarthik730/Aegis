@@ -1,200 +1,222 @@
 package com.karthik.aegis.ui.auth
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.flow.collectLatest
+import com.karthik.aegis.viewmodel.AuthUiState
+import com.karthik.aegis.viewmodel.AuthViewModel
 
 @Composable
 fun AuthScreen(
-    viewModel: AuthViewModel,
-    onAuthSuccess: () -> Unit
+    uiState: AuthUiState,
+    onAuthSuccess: () -> Unit,
+    viewModel: AuthViewModel
 ) {
-    val authState by viewModel.authState.collectAsState()
-    val phoneNumber by viewModel.phoneNumber.collectAsState()
-    val otpCode by viewModel.otpCode.collectAsState()
-    val context = LocalContext.current
-
-    var showOTPField by remember { mutableStateOf(false) }
+    var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var displayName by remember { mutableStateOf("") }
+    var isSignUp by remember { mutableStateOf(false) }
     var showPassword by remember { mutableStateOf(false) }
-    var isEmailMode by remember { mutableStateOf(false) }
 
-    LaunchedEffect(authState) {
-        if (authState is AuthState.Success) {
+    LaunchedEffect(uiState.isAuthenticated) {
+        if (uiState.isAuthenticated) {
             onAuthSuccess()
         }
     }
 
-    LaunchedEffect(authState) {
-        if (authState is AuthState.CodeSent) {
-            showOTPField = true
-        }
-    }
-
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp)
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
-            modifier = Modifier.align(Alignment.Center),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = Icons.Default.Shield,
-                contentDescription = "Aegis Logo",
-                modifier = Modifier.size(80.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
+        // App Logo / Title
+        Text(
+            "🛡️",
+            fontSize = 64.sp,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
 
-            Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            "Aegis",
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
 
-            Text(
-                text = "Welcome to Aegis",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
+        Text(
+            "Family Safety & Emergency Response",
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.outline,
+            modifier = Modifier.padding(bottom = 32.dp)
+        )
 
-            Text(
-                text = "Sign in to protect your family",
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        // Email Field
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("Email") },
+            leadingIcon = { Icon(Icons.Default.Email, "Email") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp),
+            enabled = !uiState.isLoading,
+            singleLine = true
+        )
 
-            Spacer(modifier = Modifier.height(48.dp))
-
-            // Toggle between Phone and Email
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                TextButton(
-                    onClick = { isEmailMode = false }
-                ) {
-                    Text(
-                        "Phone",
-                        color = if (!isEmailMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Text("|", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                TextButton(
-                    onClick = { isEmailMode = true }
-                ) {
-                    Text(
-                        "Email",
-                        color = if (isEmailMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            if (isEmailMode) {
-                OutlinedTextField(
-                    value = phoneNumber,
-                    onValueChange = { viewModel.onPhoneNumberChange(it) },
-                    label = { Text("Email") },
-                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text("Password") },
-                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                    trailingIcon = {
-                        IconButton(onClick = { showPassword = !showPassword }) {
-                            Icon(
-                                if (showPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                contentDescription = null
-                            )
-                        }
-                    },
-                    visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-            } else {
-                OutlinedTextField(
-                    value = phoneNumber,
-                    onValueChange = { viewModel.onPhoneNumberChange(it) },
-                    label = { Text("Phone Number") },
-                    leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-            }
-
-            if (showOTPField) {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = otpCode,
-                    onValueChange = { viewModel.onOtpChange(it) },
-                    label = { Text("Enter OTP") },
-                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            if (authState is AuthState.Error) {
-                Text(
-                    text = (authState as AuthState.Error).message,
-                    color = MaterialTheme.colorScheme.error,
-                    fontSize = 14.sp
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-
-            Button(
-                onClick = {
-                    if (showOTPField) {
-                        viewModel.verifyOTP()
-                    } else if (isEmailMode) {
-                        // Email sign in - to be implemented
-                    } else {
-                        viewModel.sendOTP(context)
-                    }
-                },
+        // Display Name (Sign Up only)
+        if (isSignUp) {
+            OutlinedTextField(
+                value = displayName,
+                onValueChange = { displayName = it },
+                label = { Text("Full Name") },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                enabled = authState !is AuthState.Loading
+                    .padding(bottom = 12.dp),
+                enabled = !uiState.isLoading,
+                singleLine = true
+            )
+        }
+
+        // Password Field
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("Password") },
+            leadingIcon = { Icon(Icons.Default.Lock, "Password") },
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp),
+            enabled = !uiState.isLoading,
+            singleLine = true
+        )
+
+        // Error Message
+        uiState.error?.let {
+            Surface(
+                color = MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
+                shape = MaterialTheme.shapes.small,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
             ) {
-                if (authState is AuthState.Loading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = Color.White
-                    )
+                Text(
+                    it,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(12.dp),
+                    fontSize = 12.sp
+                )
+            }
+        }
+
+        // Sign In / Sign Up Button
+        Button(
+            onClick = {
+                if (isSignUp) {
+                    viewModel.createAccountWithEmail(email, password, displayName)
                 } else {
-                    Text(
-                        text = if (showOTPField) "Verify OTP" else if (isEmailMode) "Sign In" else "Send OTP",
-                        fontSize = 16.sp
-                    )
+                    viewModel.signInWithEmail(email, password)
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            enabled = email.isNotEmpty() && password.isNotEmpty() && (!isSignUp || displayName.isNotEmpty()) && !uiState.isLoading
+        ) {
+            if (uiState.isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = Color.White
+                )
+            } else {
+                Text(
+                    if (isSignUp) "Create Account" else "Sign In",
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Toggle Between Sign In / Sign Up
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                if (isSignUp) "Already have an account?" else "Don't have an account?",
+                fontSize = 12.sp
+            )
+
+            TextButton(
+                onClick = { isSignUp = !isSignUp },
+                modifier = Modifier.padding(start = 4.dp),
+                enabled = !uiState.isLoading
+            ) {
+                Text(
+                    if (isSignUp) "Sign In" else "Sign Up",
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        // Demo Credentials
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            shape = MaterialTheme.shapes.small,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp)
+            ) {
+                Text(
+                    "Demo Credentials",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.outline
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    "Email: demo@aegis.app",
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.outline
+                )
+
+                Text(
+                    "Pass: demo123456",
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.outline
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                TextButton(
+                    onClick = {
+                        email = "demo@aegis.app"
+                        password = "demo123456"
+                        displayName = "Demo User"
+                    },
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text("Use Demo", fontSize = 10.sp)
                 }
             }
         }

@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  aegis-builder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: aegis:latest
+    container_name: aegis-builder
+    volumes:
+      - ./app/build:/app/app/build
+      - ./build-output:/app/output
+    environment:
+      - JAVA_OPTS=-Xmx4g
+    networks:
+      - aegis-network
+
+  firebase-emulator:
+    image: google/cloud-sdk:emulator
+    container_name: firebase-emulator
+    ports:
+      - "4000:4000"
+      - "9000:9000"
+      - "5000:5000"
+      - "8080:8080"
+    volumes:
+      - firebase-data:/firebase-data
+    networks:
+      - aegis-network
+    environment:
+      - FIREBASE_DATABASE_EMULATOR_HOST=localhost:9000
+      - FIREBASE_AUTH_EMULATOR_HOST=localhost:9099
+    command: firebase emulators:start --project aegis-demo
+
+networks:
+  aegis-network:
+    driver: bridge
+
+volumes:
+  firebase-data:
+    driver: local

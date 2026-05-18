@@ -1,17 +1,5 @@
 package com.karthik.aegis.service
 
-// ─────────────────────────────────────────────────────────────────────────────
-//   ✅ Hilt @AndroidEntryPoint injection (no manual repo instantiation)
-//   ✅ Room DB offline queue — location syncs survive Firebase outages
-//   ✅ NetworkCallback — flushes offline queue when connection returns
-//   ✅ WakeLock — prevents CPU sleep during SOS + anomaly fire
-//   ✅ directBootAware — works before user unlocks phone
-//   ✅ Broadcasts use LocalBroadcastManager — not system-wide (secure)
-//   ✅ WifiManager deprecation fix (API 29+)
-//   ✅ Looper moved off main thread for location callbacks
-//   ✅ Safe zone reload on Firebase change (ValueEventListener)
-// ─────────────────────────────────────────────────────────────────────────────
-
 import android.app.*
 import android.content.*
 import android.content.pm.PackageManager
@@ -47,7 +35,6 @@ class LocationTrackingService : Service() {
         const val CHANNEL_ID          = "aegis_location_channel"
         const val NOTIFICATION_ID     = 1001
 
-        // Broadcast actions — sent via LocalBroadcastManager (internal only)
         const val ACTION_LOCATION_UPDATE  = "com.karthik.aegis.LOCATION_UPDATE"
         const val ACTION_ZONE_ENTERED     = "com.karthik.aegis.ZONE_ENTERED"
         const val ACTION_ZONE_EXITED      = "com.karthik.aegis.ZONE_EXITED"
@@ -87,12 +74,8 @@ class LocationTrackingService : Service() {
         }
     }
 
-    // ── Hilt-injected dependencies ────────────────────────────────────────────
-
     @Inject lateinit var locationRepository: LocationRepository
     @Inject lateinit var prefs: AegisPrefs
-
-    // ── System services ───────────────────────────────────────────────────────
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
@@ -102,16 +85,10 @@ class LocationTrackingService : Service() {
     private lateinit var wakeLock: PowerManager.WakeLock
     private lateinit var handlerThread: HandlerThread
 
-    // ── Firebase ──────────────────────────────────────────────────────────────
-
     private val database = FirebaseDatabase.getInstance().reference
     private val auth     = FirebaseAuth.getInstance()
 
-    // ── Coroutines ────────────────────────────────────────────────────────────
-
     private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-
-    // ── State ─────────────────────────────────────────────────────────────────
 
     private var trackingMode         = MODE_PASSIVE
     private var lastFirebaseSyncMs   = 0L
@@ -126,10 +103,6 @@ class LocationTrackingService : Service() {
     private var safeZoneListener: ValueEventListener? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // LIFECYCLE
-    // ─────────────────────────────────────────────────────────────────────────
-
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "Service created")
@@ -139,10 +112,8 @@ class LocationTrackingService : Service() {
         connectivityManager  = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
         localBroadcastManager = LocalBroadcastManager.getInstance(this)
 
-        // Dedicated background thread for location callbacks (off main thread)
         handlerThread = HandlerThread("AegisLocationThread").also { it.start() }
 
-        // WakeLock — partial wake lock keeps CPU alive, screen can sleep
         wakeLock = (getSystemService(POWER_SERVICE) as PowerManager)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Aegis::LocationWakeLock")
 
@@ -175,7 +146,7 @@ class LocationTrackingService : Service() {
     }
 
     override fun onDestroy() {
-        super.destroy()
+        super.onDestroy()
         Log.d(TAG, "Service destroyed")
 
         fusedLocationClient.removeLocationUpdates(locationCallback)
@@ -194,10 +165,6 @@ class LocationTrackingService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // LOCATION UPDATES
-    // ─────────────────────────────────────────────────────────────────────────
 
     private fun startLocationUpdates() {
         if (ContextCompat.checkSelfPermission(
@@ -225,7 +192,7 @@ class LocationTrackingService : Service() {
         fusedLocationClient.requestLocationUpdates(
             buildLocationRequest(trackingMode),
             locationCallback,
-            handlerThread.looper   // ✅ off main thread
+            handlerThread.looper
         )
     }
 
@@ -240,16 +207,11 @@ class LocationTrackingService : Service() {
             setMaxUpdateDelayMillis(if (mode == MODE_ACTIVE) 10_000L else 60_000L)
         }.build()
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // CORE LOCATION HANDLER
-    // ─────────────────────────────────────────────────────────────────────────
-
     private fun onNewLocation(location: android.location.Location) {
         val lat   = location.latitude
         val lng   = location.longitude
         val speed = location.speed
 
-        // Ignore implausible speeds (> 300 km/h = GPS glitch)
         if (speed > 83f) {
             Log.w(TAG, "Ignoring implausible speed: ${speed}m/s")
             return
@@ -268,10 +230,6 @@ class LocationTrackingService : Service() {
         lastKnownLat = lat
         lastKnownLng = lng
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // FIREBASE SYNC + ROOM OFFLINE QUEUE
-    // ─────────────────────────────────────────────────────────────────────────
 
     private fun syncToFirebaseOrQueue(lat: Double, lng: Double, speed: Float) {
         val now = System.currentTimeMillis()
@@ -292,25 +250,18 @@ class LocationTrackingService : Service() {
         serviceScope.launch {
             try {
                 if (isNetworkAvailable()) {
-                    // Online — sync directly + flush any queued offline records
                     database.child("live_locations").child(uid).setValue(tracked).await()
                     locationRepository.flushOfflineQueue(uid)
                 } else {
-                    // Offline — save to Room DB queue
                     locationRepository.queueOfflineLocation(tracked)
                     Log.w(TAG, "Offline — location queued in Room DB")
                 }
             } catch (e: Exception) {
-                // Firebase failed — fallback to queue
                 locationRepository.queueOfflineLocation(tracked)
                 Log.e(TAG, "Firebase sync failed, queued: ${e.message}")
             }
         }
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // NETWORK CALLBACK — flush queue when back online
-    // ─────────────────────────────────────────────────────────────────────────
 
     private fun registerNetworkCallback() {
         val request = NetworkRequest.Builder()
@@ -346,10 +297,6 @@ class LocationTrackingService : Service() {
                caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // SAFE ZONE LISTENER — real-time Firebase updates
-    // ─────────────────────────────────────────────────────────────────────────
-
     private fun listenForSafeZoneChanges() {
         val uid = auth.currentUser?.uid ?: return
 
@@ -369,10 +316,6 @@ class LocationTrackingService : Service() {
         database.child("safe_zones").child(uid)
             .addValueEventListener(safeZoneListener!!)
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // SAFE ZONE / GEOFENCE CHECK
-    // ─────────────────────────────────────────────────────────────────────────
 
     private fun checkSafeZones(lat: Double, lng: Double) {
         safeZones.forEach { zone ->
@@ -400,10 +343,6 @@ class LocationTrackingService : Service() {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // ROUTE DEVIATION
-    // ─────────────────────────────────────────────────────────────────────────
-
     fun setPlannedRoute(routePoints: List<Pair<Double, Double>>) {
         plannedRoutePoints = routePoints
         Log.d(TAG, "Route set: ${routePoints.size} waypoints")
@@ -428,20 +367,13 @@ class LocationTrackingService : Service() {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // HOME WIFI — API 29+ compatible
-    // ─────────────────────────────────────────────────────────────────────────
-
     private fun checkHomeWifi() {
         val expectedSSID = prefs.getHomeWifiSSID() ?: return
 
-        // API 29+ deprecates WifiManager.connectionInfo — use NetworkCapabilities
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val network = connectivityManager.activeNetwork ?: return
             val caps = connectivityManager.getNetworkCapabilities(network) ?: return
             if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-                // Can't read SSID without location permission + Wi-Fi scan
-                // Instead check if connected to WiFi at all when near home coords
                 val nearHome = safeZones.any { zone ->
                     zone.isHome &&
                     DistanceUtils.distanceMeters(lastKnownLat, lastKnownLng, zone.latitude, zone.longitude) < 200
@@ -456,10 +388,6 @@ class LocationTrackingService : Service() {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // ANOMALY MONITOR
-    // ─────────────────────────────────────────────────────────────────────────
-
     private fun startAnomalyMonitor() {
         anomalyCheckJob?.cancel()
         anomalyCheckJob = serviceScope.launch {
@@ -473,4 +401,93 @@ class LocationTrackingService : Service() {
                         broadcastAnomaly(
                             "You haven't moved in ${stationaryMs / 60_000} minutes on your route."
                         )
-        
+                    }
+                }
+
+                val noCheckinMs = now - lastCheckinMs
+                if (noCheckinMs > ANOMALY_NO_CHECKIN_MS) {
+                    broadcastAnomaly("No check-in for ${noCheckinMs / 3_600_000} hours")
+                }
+            }
+        }
+    }
+
+    private fun autoSwitchMode(speed: Float) {
+        val newMode = if (speed > SPEED_DRIVING_MPS) MODE_ACTIVE else MODE_PASSIVE
+        if (newMode != trackingMode) {
+            trackingMode = newMode
+            Log.d(TAG, "Switched to $newMode mode (speed: ${speed}m/s)")
+        }
+    }
+
+    private fun broadcastLocationUpdate(lat: Double, lng: Double, speed: Float) {
+        broadcastLocal(ACTION_LOCATION_UPDATE) {
+            putExtra(EXTRA_LATITUDE, lat)
+            putExtra(EXTRA_LONGITUDE, lng)
+            putExtra(EXTRA_SPEED, speed)
+        }
+    }
+
+    private fun broadcastZoneEvent(action: String, zoneName: String) {
+        broadcastLocal(action) {
+            putExtra(EXTRA_ZONE_NAME, zoneName)
+        }
+    }
+
+    private fun broadcastHomeArrived() {
+        broadcastLocal(ACTION_HOME_ARRIVED)
+    }
+
+    private fun broadcastAnomaly(message: String) {
+        broadcastLocal(ACTION_ANOMALY_DETECTED) {
+            putExtra(EXTRA_ANOMALY_MSG, message)
+        }
+    }
+
+    private fun broadcastLocal(action: String, extras: (Intent.() -> Unit)? = null) {
+        val intent = Intent(action)
+        extras?.invoke(intent)
+        localBroadcastManager.sendBroadcast(intent)
+        Log.d(TAG, "Broadcast sent: $action")
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Aegis Location Tracking",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                setSound(null, null)
+                enableVibration(false)
+            }
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun buildNotification(text: String): Notification {
+        val intent = Intent(this, Class.forName("com.karthik.aegis.ui.MainActivity")).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Aegis Location Service")
+            .setContentText(text)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentIntent(pendingIntent)
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
+    }
+
+    private fun updateNotification(text: String) {
+        notificationManager.notify(
+            NOTIFICATION_ID,
+            buildNotification(text)
+        )
+    }
+}

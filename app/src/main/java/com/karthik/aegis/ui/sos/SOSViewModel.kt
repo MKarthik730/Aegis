@@ -3,31 +3,13 @@ package com.karthik.aegis.ui.sos
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.karthik.aegis.model.EmergencyContact
+import com.karthik.aegis.model.SOSAlert
 import com.karthik.aegis.repository.ContactsRepository
 import com.karthik.aegis.repository.SOSRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
-sealed class SOSPhase {
-    data object Idle : SOSPhase()
-    data object Confirming : SOSPhase()
-    data class Countdown(val secondsLeft: Int) : SOSPhase()
-    data object Active : SOSPhase()
-    data object Resolved : SOSPhase()
-}
-
-data class SOSUiState(
-    val phase: SOSPhase = SOSPhase.Idle,
-    val contacts: List<EmergencyContact> = emptyList(),
-    val error: String? = null,
-    val isLoading: Boolean = false
-)
 
 @HiltViewModel
 class SOSViewModel @Inject constructor(
@@ -38,121 +20,68 @@ class SOSViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SOSUiState())
     val uiState: StateFlow<SOSUiState> = _uiState.asStateFlow()
 
-    private var countdownJob: Job? = null
+    val activeAlerts: StateFlow<List<SOSAlert>> = sosRepository
+        .observeSOSAlerts("global")
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    init {
-        loadContacts()
-    }
-
-    private fun loadContacts() {
+    fun triggerSOS(reason: String, latitude: Double = 0.0, longitude: Double = 0.0) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
+                _uiState.value = _uiState.value.copy(isLoading = true)
                 val contacts = contactsRepository.getEmergencyContacts()
-                _uiState.value = _uiState.value.copy(contacts = contacts, isLoading = false)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = "Failed to load contacts"
-                )
-            }
-        }
-    }
-
-    fun requestConfirmation() {
-        _uiState.value = _uiState.value.copy(phase = SOSPhase.Confirming)
-    }
-
-    fun cancelConfirmation() {
-        _uiState.value = _uiState.value.copy(phase = SOSPhase.Idle)
-    }
-
-    fun startCountdown(reason: String = "Manual SOS") {
-        _uiState.value = _uiState.value.copy(phase = SOSPhase.Countdown(secondsLeft = 30))
-        countdownJob?.cancel()
-        countdownJob = viewModelScope.launch {
-            for (sec in 30 downTo 1) {
-                _uiState.value = _uiState.value.copy(phase = SOSPhase.Countdown(secondsLeft = sec))
-                delay(1000L)
-            }
-            triggerSOS(reason)
-        }
-    }
-
-    fun cancelCountdown() {
-        countdownJob?.cancel()
-        _uiState.value = _uiState.value.copy(phase = SOSPhase.Idle)
-    }
-
-    private fun triggerSOS(reason: String) {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            try {
+                
                 sosRepository.triggerSOSWithReason(
-                    contacts = _uiState.value.contacts,
+                    contacts = contacts,
                     reason = reason,
                     isAutomatic = false,
+                    latitude = latitude,
+                    longitude = longitude,
                     onSuccess = {
                         _uiState.value = _uiState.value.copy(
-                            phase = SOSPhase.Active,
-                            isLoading = false
+                            isLoading = false,
+                            message = "SOS sent successfully!"
                         )
                     },
-                    onFailure = { errorMsg ->
+                    onFailure = { error ->
                         _uiState.value = _uiState.value.copy(
-                            phase = SOSPhase.Idle,
                             isLoading = false,
-                            error = errorMsg
+                            error = error
                         )
                     }
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
-                    phase = SOSPhase.Idle,
                     isLoading = false,
-                    error = e.message ?: "Failed to trigger SOS"
+                    error = e.message ?: "Unknown error"
                 )
             }
         }
     }
 
-    fun sendSafeSignal() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            try {
-                sosRepository.sendSafeNotification(_uiState.value.contacts)
-                _uiState.value = _uiState.value.copy(
-                    phase = SOSPhase.Resolved,
-                    isLoading = false
-                )
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "Failed to send safe signal"
-                )
-            }
-        }
-    }
-
-    fun resolveSOS() {
+    fun resolveSOSAlert(uid: String) {
         viewModelScope.launch {
             try {
-                sosRepository.resolveSOSAlert("")
-                _uiState.value = _uiState.value.copy(phase = SOSPhase.Idle)
+                sosRepository.resolveSOSAlert(uid)
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    error = e.message ?: "Failed to resolve SOS"
-                )
+                _uiState.value = _uiState.value.copy(error = e.message)
             }
         }
     }
 
-    fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        countdownJob?.cancel()
+    fun sendSafeNotification() {
+        viewModelScope.launch {
+            try {
+                val contacts = contactsRepository.getEmergencyContacts()
+                sosRepository.sendSafeNotification(contacts)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = e.message)
+            }
+        }
     }
 }
+
+data class SOSUiState(
+    val isLoading: Boolean = false,
+    val message: String? = null,
+    val error: String? = null
+)

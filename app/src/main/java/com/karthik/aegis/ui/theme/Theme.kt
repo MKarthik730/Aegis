@@ -3,9 +3,14 @@ package com.karthik.aegis.ui.theme
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
@@ -14,42 +19,22 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-val AegisBlue = Color(0xFF1976D2)
-val AegisBlueDark = Color(0xFF0D47A1)
-val AegisBlueLight = Color(0xFF42A5F5)
-val AegisGreen = Color(0xFF4CAF50)
-val AegisRed = Color(0xFFE53935)
-val AegisOrange = Color(0xFFFF9800)
-val AegisYellow = Color(0xFFFFEB3B)
-
 private val DarkColorScheme = darkColorScheme(
-    primary = AegisBlueLight,
-    onPrimary = Color.White,
-    primaryContainer = AegisBlueDark,
-    onPrimaryContainer = Color.White,
-    secondary = AegisGreen,
-    onSecondary = Color.White,
+    primary = Color(0xFF00D084),
+    secondary = Color(0xFF00897B),
+    tertiary = Color(0xFFFF5252),
+    error = Color(0xFFFF5252),
     background = Color(0xFF121212),
-    onBackground = Color.White,
     surface = Color(0xFF1E1E1E),
-    onSurface = Color.White,
-    error = AegisRed,
-    onError = Color.White
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = AegisBlue,
-    onPrimary = Color.White,
-    primaryContainer = AegisBlueLight,
-    onPrimaryContainer = Color.White,
-    secondary = AegisGreen,
-    onSecondary = Color.White,
-    background = Color(0xFFF5F5F5),
-    onBackground = Color.Black,
-    surface = Color.White,
-    onSurface = Color.Black,
-    error = AegisRed,
-    onError = Color.White
+    primary = Color(0xFF00897B),
+    secondary = Color(0xFF00D084),
+    tertiary = Color(0xFFE91E63),
+    error = Color(0xFFB00020),
+    background = Color(0xFFFAFAFA),
+    surface = Color(0xFFFFFFFF),
 )
 
 @Composable
@@ -72,13 +57,20 @@ fun AegisTheme(
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            WindowCompat.getInsetsController(window, view)?.isAppearanceLightStatusBars = !darkTheme
         }
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
+        shapes = Shapes(
+            extraSmall = RoundedCornerShape(4.dp),
+            small = RoundedCornerShape(8.dp),
+            medium = RoundedCornerShape(12.dp),
+            large = RoundedCornerShape(16.dp),
+            extraLarge = RoundedCornerShape(28.dp)
+        ),
         content = content
     )
 }

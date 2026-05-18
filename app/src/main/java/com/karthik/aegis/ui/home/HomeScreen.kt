@@ -1,324 +1,245 @@
 package com.karthik.aegis.ui.home
 
+import android.content.Context
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.karthik.aegis.model.FamilyMember
+import com.karthik.aegis.model.SOSAlert
+import com.karthik.aegis.model.TrackedLocation
+import com.karthik.aegis.service.LocationTrackingService
+import com.karthik.aegis.utils.DistanceUtils
+import kotlin.math.roundToInt
 
-@OptIn(ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    viewModel: HomeViewModel,
+    uiState: HomeUiState,
+    familyMembers: List<FamilyMember>,
+    familyLocations: Map<String, TrackedLocation>,
+    activeAlerts: List<SOSAlert>,
     onNavigateToSOS: () -> Unit,
     onNavigateToContacts: () -> Unit,
-    onNavigateToZones: () -> Unit,
-    onNavigateToFamily: () -> Unit
+    onSignOut: () -> Unit,
+    viewModel: HomeViewModel,
+    context: Context
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val familyMembers by viewModel.familyMembers.collectAsState()
-    val activeAlerts by viewModel.activeAlerts.collectAsState()
-    
-    val locationPermissions = rememberMultiplePermissionsState(
-        permissions = listOf(
-            android.Manifest.permission.ACCESS_FINE_LOCATION,
-            android.Manifest.permission.ACCESS_COARSE_LOCATION
-        )
-    )
-
-    var showSOSDialog by remember { mutableStateOf(false) }
-
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Aegis") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = Color.White
-                ),
+                title = { Text("Aegis • Family Safety") },
                 actions = {
-                    IconButton(onClick = { /* Settings */ }) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.White)
+                    IconButton(onClick = onSignOut) {
+                        // Corrected LogOut to Logout
+                        Icon(Icons.Default.Logout, "Sign Out")
                     }
                 }
             )
         },
         floatingActionButton = {
-            LargeFloatingActionButton(
-                onClick = { showSOSDialog = true },
-                containerColor = MaterialTheme.colorScheme.error,
-                contentColor = Color.White
+            FloatingActionButton(
+                onClick = onNavigateToSOS,
+                containerColor = MaterialTheme.colorScheme.error
             ) {
-                Icon(Icons.Default.Warning, contentDescription = "SOS", modifier = Modifier.size(36.dp))
+                Icon(Icons.Default.Warning, "SOS", tint = Color.White)
             }
         }
-    ) { padding ->
+    ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(paddingValues)
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Active Alerts Section
+            if (activeAlerts.isNotEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Text(
+                                "🚨 ACTIVE ALERTS (${activeAlerts.size})",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            activeAlerts.forEach { alert ->
+                                Text(
+                                    "${alert.senderName}: ${alert.reason}",
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             // Quick Actions
             item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Button(
+                        onClick = onNavigateToSOS,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Icon(Icons.Default.Warning, "SOS", modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("SOS")
+                    }
+
+                    Button(
+                        onClick = onNavigateToContacts,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp)
+                    ) {
+                        Icon(Icons.Default.Person, "Contacts", modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Contacts")
+                    }
+
+                    Button(
+                        onClick = {
+                            LocationTrackingService.startTracking(context, LocationTrackingService.MODE_ACTIVE)
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp)
+                    ) {
+                        Icon(Icons.Default.LocationOn, "Track", modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Track")
+                    }
+                }
+            }
+
+            // Family Members Section
+            item {
                 Text(
-                    text = "Quick Actions",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
+                    "👨‍👩‍👧‍👦 Family (${familyMembers.size})",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
                 )
             }
 
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    QuickActionCard(
-                        icon = Icons.Default.LocationOn,
-                        title = "Live Location",
-                        subtitle = "Share your location",
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            if (locationPermissions.allPermissionsGranted) {
-                                viewModel.startLocationTracking()
-                            } else {
-                                locationPermissions.launchMultiplePermissionRequest()
-                            }
-                        }
-                    )
-                    QuickActionCard(
-                        icon = Icons.Default.People,
-                        title = "Family",
-                        subtitle = "${familyMembers.size} members",
-                        modifier = Modifier.weight(1f),
-                        onClick = onNavigateToFamily
-                    )
-                }
-            }
-
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    QuickActionCard(
-                        icon = Icons.Default.Lock,
-                        title = "Safe Zones",
-                        subtitle = "Manage zones",
-                        modifier = Modifier.weight(1f),
-                        onClick = onNavigateToZones
-                    )
-                    QuickActionCard(
-                        icon = Icons.Default.ContactPhone,
-                        title = "Contacts",
-                        subtitle = "Emergency contacts",
-                        modifier = Modifier.weight(1f),
-                        onClick = onNavigateToContacts
-                    )
-                }
-            }
-
-            // Active Alerts
-            if (activeAlerts.isNotEmpty()) {
-                item {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Active Alerts",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-
-                items(activeAlerts) { alert ->
-                    AlertCard(alert = alert)
-                }
-            }
-
-            // Family Members
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Family Members",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    TextButton(onClick = onNavigateToFamily) {
-                        Text("See All")
-                    }
-                }
+            items(familyMembers) { member ->
+                FamilyMemberCard(member, familyLocations[member.uid])
             }
 
             if (familyMembers.isEmpty()) {
                 item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
-                                Icons.Default.FamilyRestroom,
-                                contentDescription = null,
+                                // Changed PersonAdd to Person to ensure compatibility if index is stale
+                                Icons.Default.Person,
+                                "No members",
                                 modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = MaterialTheme.colorScheme.outline
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
                             Text(
                                 "No family members yet",
-                                fontWeight = FontWeight.Medium
+                                modifier = Modifier.padding(top = 12.dp)
                             )
-                            Text(
-                                "Create or join a family group to get started",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(onClick = onNavigateToFamily) {
-                                Text("Add Family")
-                            }
                         }
                     }
                 }
             }
         }
     }
-
-    // SOS Confirmation Dialog
-    if (showSOSDialog) {
-        AlertDialog(
-            onDismissRequest = { showSOSDialog = false },
-            title = { Text("Send SOS Alert?") },
-            text = { Text("This will alert all your emergency contacts with your live location.") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showSOSDialog = false
-                        onNavigateToSOS()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Send SOS", color = Color.White)
-                }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { showSOSDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
 }
 
 @Composable
-fun QuickActionCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    subtitle: String,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
+private fun FamilyMemberCard(member: FamilyMember, location: TrackedLocation?) {
     Card(
-        modifier = modifier.clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                modifier = Modifier.size(32.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = title,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = subtitle,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-fun AlertCard(alert: com.karthik.aegis.model.SOSAlert) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer
-        )
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.error),
-                contentAlignment = Alignment.Center
+            // Avatar
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                color = when (member.status) {
+                    "SAFE" -> Color(0xFF4CAF50)
+                    "UNSAFE" -> Color(0xFFF44336)
+                    else -> MaterialTheme.colorScheme.surfaceVariant
+                }
             ) {
-                Icon(
-                    Icons.Default.Warning,
-                    contentDescription = null,
-                    tint = Color.White
-                )
+                Box(
+                    modifier = Modifier.size(40.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        member.name.firstOrNull()?.toString() ?: "?",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
+
+            // Member Info
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
                 Text(
-                    text = alert.senderName,
-                    fontWeight = FontWeight.SemiBold
+                    member.name,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = alert.reason,
+                    "Status: ${member.status}",
                     fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.outline
                 )
+                location?.let {
+                    val speed = it.speed.roundToInt()
+                    Text(
+                        "Speed: ${speed}m/s | Mode: ${it.mode}",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
             }
-            IconButton(onClick = { /* Navigate to alert */ }) {
-                Icon(Icons.Default.ChevronRight, contentDescription = null)
+
+            // Call Button
+            IconButton(
+                onClick = { /* Start call to member */ }
+            ) {
+                Icon(Icons.Default.Call, "Call")
             }
         }
     }

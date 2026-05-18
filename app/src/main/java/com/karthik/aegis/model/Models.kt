@@ -97,9 +97,11 @@ data class SafetyScore(
     @ColumnInfo(name = "check_in_count") val checkInCount: Int = 0,
     @ColumnInfo(name = "zone_compliance") val zoneCompliance: Int = 0,
     @ColumnInfo(name = "sos_triggers") val sosTriggers: Int = 0,
-    @ColumnInfo(name = "safe_behavior") val safeBehavior: Int = 0,
-    @Ignore val breakdown: Map<String, Any> = emptyMap()
-)
+    @ColumnInfo(name = "safe_behavior") val safeBehavior: Int = 0
+) {
+    @Ignore
+    var breakdown: Map<String, Any> = emptyMap()
+}
 
 @IgnoreExtraProperties
 @Entity(tableName = "check_ins")

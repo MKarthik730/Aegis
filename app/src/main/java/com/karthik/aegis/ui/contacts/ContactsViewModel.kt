@@ -11,16 +11,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class ContactsUiState(
-    val contacts: List<EmergencyContact> = emptyList(),
-    val isLoading: Boolean = false,
-    val error: String? = null
-)
-
 @HiltViewModel
 class ContactsViewModel @Inject constructor(
     private val contactsRepository: ContactsRepository
 ) : ViewModel() {
+
+    private val _contacts = MutableStateFlow<List<EmergencyContact>>(emptyList())
+    val contacts: StateFlow<List<EmergencyContact>> = _contacts.asStateFlow()
 
     private val _uiState = MutableStateFlow(ContactsUiState())
     val uiState: StateFlow<ContactsUiState> = _uiState.asStateFlow()
@@ -29,15 +26,13 @@ class ContactsViewModel @Inject constructor(
         loadContacts()
     }
 
-    fun loadContacts() {
+    private fun loadContacts() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
+                _uiState.value = _uiState.value.copy(isLoading = true)
                 val contacts = contactsRepository.getEmergencyContacts()
-                _uiState.value = _uiState.value.copy(
-                    contacts = contacts,
-                    isLoading = false
-                )
+                _contacts.value = contacts
+                _uiState.value = _uiState.value.copy(isLoading = false)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -53,22 +48,18 @@ class ContactsViewModel @Inject constructor(
                 contactsRepository.addEmergencyContact(contact)
                 loadContacts()
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    error = e.message ?: "Failed to add contact"
-                )
+                _uiState.value = _uiState.value.copy(error = e.message)
             }
         }
     }
 
-    fun deleteContact(contactId: String) {
+    fun removeContact(contactId: String) {
         viewModelScope.launch {
             try {
                 contactsRepository.removeEmergencyContact(contactId)
                 loadContacts()
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    error = e.message ?: "Failed to delete contact"
-                )
+                _uiState.value = _uiState.value.copy(error = e.message)
             }
         }
     }
@@ -79,14 +70,13 @@ class ContactsViewModel @Inject constructor(
                 contactsRepository.updateEmergencyContact(contact)
                 loadContacts()
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    error = e.message ?: "Failed to update contact"
-                )
+                _uiState.value = _uiState.value.copy(error = e.message)
             }
         }
     }
-
-    fun clearError() {
-        _uiState.value = _uiState.value.copy(error = null)
-    }
 }
+
+data class ContactsUiState(
+    val isLoading: Boolean = false,
+    val error: String? = null
+)

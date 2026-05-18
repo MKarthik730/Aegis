@@ -10,3 +10,21 @@
 local.properties
 nul
 PHASE2_COMMITS.md
+# Sensitive files - never commit these
+app/google-services.json
+local.properties
+gradle.properties
+
+# Build outputs
+build/
+app/build/
+.gradle/
+temp/
+
+# IDE
+.idea/
+*.iml
+
+# Keystore
+*.jks
+*.keystore

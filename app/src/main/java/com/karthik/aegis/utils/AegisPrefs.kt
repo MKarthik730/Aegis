@@ -1,179 +1,92 @@
 package com.karthik.aegis.utils
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.runBlocking
-import javax.inject.Inject
-import javax.inject.Singleton
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "aegis_prefs")
+private val Context.dataStore by preferencesDataStore("aegis_prefs")
 
-@Singleton
-class AegisPrefs @Inject constructor(
-    @ApplicationContext private val context: Context
-) {
-    private val ds = context.dataStore
+class AegisPrefs(private val context: Context) {
 
     companion object {
-        // Feature toggles
-        private val KEY_LOCATION_TRACKING    = booleanPreferencesKey("location_tracking")
-        private val KEY_ACCIDENT_DETECTION   = booleanPreferencesKey("accident_detection")
-        private val KEY_FATIGUE_DETECTION    = booleanPreferencesKey("fatigue_detection")
-        private val KEY_ZONE_NOTIFICATIONS   = booleanPreferencesKey("zone_notifications")
-        private val KEY_ZONE_EXIT_ALERTS     = booleanPreferencesKey("zone_exit_alerts")
-        private val KEY_NIGHT_MODE_SENSITIVITY = booleanPreferencesKey("night_mode_sensitivity")
-
-        // User settings
-        private val KEY_HOME_WIFI_SSID       = stringPreferencesKey("home_wifi_ssid")
-        private val KEY_USER_NAME            = stringPreferencesKey("user_name")
-        private val KEY_USER_PHONE           = stringPreferencesKey("user_phone")
-        private val KEY_FAMILY_GROUP_ID      = stringPreferencesKey("family_group_id")
-        private val KEY_FCM_TOKEN            = stringPreferencesKey("fcm_token")
-
-        // SOS settings
-        private val KEY_AUTO_SOS_COUNTDOWN    = intPreferencesKey("auto_sos_countdown")
-        private val KEY_VOLUME_SOS_ENABLED   = booleanPreferencesKey("volume_sos_enabled")
-        private val KEY_POWER_SOS_ENABLED    = booleanPreferencesKey("power_sos_enabled")
-        private val KEY_SHAKE_SOS_ENABLED    = booleanPreferencesKey("shake_sos_enabled")
-
-        // Location settings
-        private val KEY_TRACKING_MODE        = stringPreferencesKey("tracking_mode")
-        private val KEY_LOCATION_INTERVAL_MS = longPreferencesKey("location_interval_ms")
-        private val KEY_SPEED_ALERT_THRESHOLD = floatPreferencesKey("speed_alert_threshold")
-
-        // Check-in settings
-        private val KEY_CHECK_IN_REMINDER_ENABLED = booleanPreferencesKey("check_in_reminder")
-        private val KEY_CHECK_IN_INTERVAL_MS      = longPreferencesKey("check_in_interval_ms")
-
-        // Onboarding
-        private val KEY_ONBOARDING_COMPLETE  = booleanPreferencesKey("onboarding_complete")
+        private val LOCATION_TRACKING_ENABLED = booleanPreferencesKey("location_tracking_enabled")
+        private val ACCIDENT_DETECTION_ENABLED = booleanPreferencesKey("accident_detection_enabled")
+        private val FATIGUE_DETECTION_ENABLED = booleanPreferencesKey("fatigue_detection_enabled")
+        private val HOME_WIFI_SSID = stringPreferencesKey("home_wifi_ssid")
+        private val NIGHT_MODE_ENABLED = booleanPreferencesKey("night_mode_enabled")
+        private val EMERGENCY_CONTACTS_COUNT = stringPreferencesKey("emergency_contacts_count")
     }
 
-    // ── Feature Toggles (synchronous — for services/receivers) ────────────────
-
-    fun isLocationTrackingEnabled(): Boolean = runBlocking {
-        ds.data.first()[KEY_LOCATION_TRACKING] ?: true
-    }
-    fun isAccidentDetectionEnabled(): Boolean = runBlocking {
-        ds.data.first()[KEY_ACCIDENT_DETECTION] ?: true
-    }
-    fun isFatigueDetectionEnabled(): Boolean = runBlocking {
-        ds.data.first()[KEY_FATIGUE_DETECTION] ?: true
-    }
-    fun isZoneNotificationsEnabled(): Boolean = runBlocking {
-        ds.data.first()[KEY_ZONE_NOTIFICATIONS] ?: true
-    }
-    fun isZoneExitNotificationsEnabled(): Boolean = runBlocking {
-        ds.data.first()[KEY_ZONE_EXIT_ALERTS] ?: true
-    }
-    fun isNightModeSensitivityEnabled(): Boolean = runBlocking {
-        ds.data.first()[KEY_NIGHT_MODE_SENSITIVITY] ?: false
+    fun isLocationTrackingEnabled(): Boolean {
+        return context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
+            .getBoolean(LOCATION_TRACKING_ENABLED.name, false)
     }
 
-    fun getHomeWifiSSID(): String? = runBlocking {
-        ds.data.first()[KEY_HOME_WIFI_SSID]
+    fun setLocationTrackingEnabled(enabled: Boolean) {
+        context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
+            .edit().putBoolean(LOCATION_TRACKING_ENABLED.name, enabled).apply()
     }
 
-    fun getUserName(): String = runBlocking {
-        ds.data.first()[KEY_USER_NAME] ?: ""
+    fun isAccidentDetectionEnabled(): Boolean {
+        return context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
+            .getBoolean(ACCIDENT_DETECTION_ENABLED.name, true)
     }
 
-    fun getUserPhone(): String = runBlocking {
-        ds.data.first()[KEY_USER_PHONE] ?: ""
+    fun setAccidentDetectionEnabled(enabled: Boolean) {
+        context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
+            .edit().putBoolean(ACCIDENT_DETECTION_ENABLED.name, enabled).apply()
     }
 
-    fun getFamilyGroupId(): String? = runBlocking {
-        ds.data.first()[KEY_FAMILY_GROUP_ID]
+    fun isFatigueDetectionEnabled(): Boolean {
+        return context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
+            .getBoolean(FATIGUE_DETECTION_ENABLED.name, false)
     }
 
-    fun getTrackingMode(): String = runBlocking {
-        ds.data.first()[KEY_TRACKING_MODE] ?: "PASSIVE"
+    fun setFatigueDetectionEnabled(enabled: Boolean) {
+        context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
+            .edit().putBoolean(FATIGUE_DETECTION_ENABLED.name, enabled).apply()
     }
 
-    fun isOnboardingComplete(): Boolean = runBlocking {
-        ds.data.first()[KEY_ONBOARDING_COMPLETE] ?: false
+    fun getHomeWifiSSID(): String? {
+        return context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
+            .getString(HOME_WIFI_SSID.name, null)
     }
 
-    // ── Reactive observation (for Compose/ViewModel) ──────────────────────────
-
-    fun observeLocationTrackingEnabled() = ds.data.map { it[KEY_LOCATION_TRACKING] ?: true }
-    fun observeAccidentDetectionEnabled() = ds.data.map { it[KEY_ACCIDENT_DETECTION] ?: true }
-    fun observeFatigueDetectionEnabled() = ds.data.map { it[KEY_FATIGUE_DETECTION] ?: true }
-    fun observeZoneNotificationsEnabled() = ds.data.map { it[KEY_ZONE_NOTIFICATIONS] ?: true }
-
-    // ── Setters ───────────────────────────────────────────────────────────────
-
-    suspend fun setLocationTrackingEnabled(enabled: Boolean) {
-        ds.edit { it[KEY_LOCATION_TRACKING] = enabled }
+    fun setHomeWifiSSID(ssid: String) {
+        context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
+            .edit().putString(HOME_WIFI_SSID.name, ssid).apply()
     }
 
-    suspend fun setAccidentDetectionEnabled(enabled: Boolean) {
-        ds.edit { it[KEY_ACCIDENT_DETECTION] = enabled }
+    fun isNightModeEnabled(): Boolean {
+        return context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
+            .getBoolean(NIGHT_MODE_ENABLED.name, true)
     }
 
-    suspend fun setFatigueDetectionEnabled(enabled: Boolean) {
-        ds.edit { it[KEY_FATIGUE_DETECTION] = enabled }
+    fun setNightModeEnabled(enabled: Boolean) {
+        context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
+            .edit().putBoolean(NIGHT_MODE_ENABLED.name, enabled).apply()
     }
 
-    suspend fun setZoneNotificationsEnabled(enabled: Boolean) {
-        ds.edit { it[KEY_ZONE_NOTIFICATIONS] = enabled }
+    fun getUserFCMToken(): String? {
+        return context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
+            .getString("fcm_token", null)
     }
 
-    suspend fun setHomeWifiSSID(ssid: String?) {
-        ds.edit {
-            if (ssid != null) it[KEY_HOME_WIFI_SSID] = ssid
-            else it.remove(KEY_HOME_WIFI_SSID)
-        }
+    fun setUserFCMToken(token: String) {
+        context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
+            .edit().putString("fcm_token", token).apply()
     }
 
-    suspend fun setUserName(name: String) {
-        ds.edit { it[KEY_USER_NAME] = name }
+    fun getCurrentUserId(): String? {
+        return context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
+            .getString("current_user_id", null)
     }
 
-    suspend fun setUserPhone(phone: String) {
-        ds.edit { it[KEY_USER_PHONE] = phone }
-    }
-
-    suspend fun setFamilyGroupId(groupId: String?) {
-        ds.edit {
-            if (groupId != null) it[KEY_FAMILY_GROUP_ID] = groupId
-            else it.remove(KEY_FAMILY_GROUP_ID)
-        }
-    }
-
-    suspend fun setOnboardingComplete(complete: Boolean) {
-        ds.edit { it[KEY_ONBOARDING_COMPLETE] = complete }
-    }
-
-    suspend fun setVolumeSOSEnabled(enabled: Boolean) {
-        ds.edit { it[KEY_VOLUME_SOS_ENABLED] = enabled }
-    }
-
-    suspend fun setPowerSOSEnabled(enabled: Boolean) {
-        ds.edit { it[KEY_POWER_SOS_ENABLED] = enabled }
-    }
-
-    suspend fun setShakeSOSEnabled(enabled: Boolean) {
-        ds.edit { it[KEY_SHAKE_SOS_ENABLED] = enabled }
-    }
-
-    suspend fun setFcmToken(token: String?) {
-        ds.edit {
-            if (token != null) it[KEY_FCM_TOKEN] = token
-            else it.remove(KEY_FCM_TOKEN)
-        }
-    }
-
-    fun getFcmToken(): String? = runBlocking {
-        ds.data.first()[KEY_FCM_TOKEN]
-    }
-
-    suspend fun clearAll() {
-        ds.edit { it.clear() }
+    fun setCurrentUserId(userId: String) {
+        context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
+            .edit().putString("current_user_id", userId).apply()
     }
 }

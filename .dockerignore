@@ -1,0 +1,17 @@
+.gradle
+.git
+.gitignore
+build/
+.build/
+*.apk
+*.aar
+*.log
+*.iml
+.idea/
+.DS_Store
+local.properties
+gradle.properties
+*.keystore
+*.jks
+node_modules/
+*.lock
