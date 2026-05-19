@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.PhoneAuthCredential
+import com.google.firebase.auth.UserProfileChangeRequest
 import com.karthik.aegis.utils.AegisPrefs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,12 +32,19 @@ class AuthViewModel @Inject constructor(
             try {
                 _uiState.value = _uiState.value.copy(isLoading = true)
                 auth.signInWithCredential(credential).await()
-                val uid = auth.currentUser?.uid ?: return@launch
-                prefs.setCurrentUserId(uid)
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    isAuthenticated = true
-                )
+                val uid = auth.currentUser?.uid
+                if (uid != null) {
+                    prefs.setCurrentUserId(uid)
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isAuthenticated = true
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "User ID not found"
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -51,12 +59,19 @@ class AuthViewModel @Inject constructor(
             try {
                 _uiState.value = _uiState.value.copy(isLoading = true)
                 auth.signInWithEmailAndPassword(email, password).await()
-                val uid = auth.currentUser?.uid ?: return@launch
-                prefs.setCurrentUserId(uid)
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    isAuthenticated = true
-                )
+                val uid = auth.currentUser?.uid
+                if (uid != null) {
+                    prefs.setCurrentUserId(uid)
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isAuthenticated = true
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "User ID not found"
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -73,17 +88,24 @@ class AuthViewModel @Inject constructor(
                 auth.createUserWithEmailAndPassword(email, password).await()
                 
                 auth.currentUser?.updateProfile(
-                    com.google.firebase.auth.UserProfileChangeRequest.Builder()
+                    UserProfileChangeRequest.Builder()
                         .setDisplayName(displayName)
                         .build()
-                ).await()
+                )?.await()
 
-                val uid = auth.currentUser?.uid ?: return@launch
-                prefs.setCurrentUserId(uid)
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    isAuthenticated = true
-                )
+                val uid = auth.currentUser?.uid
+                if (uid != null) {
+                    prefs.setCurrentUserId(uid)
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isAuthenticated = true
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "User ID not found"
+                    )
+                }
             } catch (e: FirebaseAuthUserCollisionException) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,

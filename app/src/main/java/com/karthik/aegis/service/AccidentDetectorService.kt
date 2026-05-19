@@ -39,7 +39,6 @@ class AccidentDetectorService : Service(), SensorEventListener, LifecycleOwner {
         const val ACTION_CRASH_DETECTED     = "com.karthik.aegis.CRASH_DETECTED"
         const val ACTION_FALL_DETECTED      = "com.karthik.aegis.FALL_DETECTED"
         const val ACTION_FATIGUE_DETECTED   = "com.karthik.aegis.FATIGUE_DETECTED"
-        const val ACTION_SHAKE_SOS          = "com.karthik.aegis.SHAKE_SOS"
         const val ACTION_AUTO_SOS_COUNTDOWN = "com.karthik.aegis.AUTO_SOS_COUNTDOWN"
         const val ACTION_AUTO_SOS_CANCELLED = "com.karthik.aegis.AUTO_SOS_CANCELLED"
         const val ACTION_CANCEL_COUNTDOWN   = "com.karthik.aegis.ACTION_CANCEL_COUNTDOWN"
@@ -57,9 +56,9 @@ class AccidentDetectorService : Service(), SensorEventListener, LifecycleOwner {
         private const val SHAKE_THRESHOLD         = 12f
         private const val SHAKE_COUNT_REQUIRED    = 5
         private const val SHAKE_WINDOW_MS         = 2_000L
-        private const val BLINK_RATE_DROWSY       = 8
         private const val EYE_CLOSED_THRESHOLD_MS = 1_500L
         private const val FATIGUE_WINDOW_MS       = 60_000L
+        private const val BLINK_RATE_DROWSY       = 8
 
         const val AUTO_SOS_COUNTDOWN_SEC          = 30
 
@@ -86,9 +85,7 @@ class AccidentDetectorService : Service(), SensorEventListener, LifecycleOwner {
     }
 
     private val dispatcher = ServiceLifecycleDispatcher(this)
-
-    override val lifecycle: Lifecycle
-        get() = dispatcher.lifecycle
+    override val lifecycle: Lifecycle get() = dispatcher.lifecycle
 
     @Inject lateinit var prefs: AegisPrefs
 
@@ -106,11 +103,12 @@ class AccidentDetectorService : Service(), SensorEventListener, LifecycleOwner {
     private lateinit var localBroadcastManager: LocalBroadcastManager
     private lateinit var wakeLock: PowerManager.WakeLock
 
+    // Detection state
     private var crashEventStartMs   = 0L
     private var inCrashEvent        = false
     private var lastCrashMs         = 0L
-    private var freefallStartMs     = 0L
     private var inFreefall          = false
+    private var freefallStartMs     = 0L
     private var lastFallMs          = 0L
     private val shakeTimestamps     = ArrayDeque<Long>()
     private var lastShakeMs         = 0L
@@ -157,6 +155,8 @@ class AccidentDetectorService : Service(), SensorEventListener, LifecycleOwner {
             startForeground(NOTIFICATION_ID, notification)
         }
 
+        // Prevent duplicate registration
+        sensorManager.unregisterListener(this)
         registerSensors()
 
         if (prefs.isFatigueDetectionEnabled() &&
@@ -294,31 +294,47 @@ class AccidentDetectorService : Service(), SensorEventListener, LifecycleOwner {
         val rightOpen = face.rightEyeOpenProbability ?: return
         val now = System.currentTimeMillis()
         val closed = leftOpen < 0.2f && rightOpen < 0.2f
+
         if (closed) {
-            if (!eyesCurrentlyClosed) { eyesCurrentlyClosed = true; eyeClosedStartMs = now }
-            else if (now - eyeClosedStartMs >= EYE_CLOSED_THRESHOLD_MS) {
+            if (!eyesCurrentlyClosed) {
+                eyesCurrentlyClosed = true
+                eyeClosedStartMs = now
+            } else if (now - eyeClosedStartMs >= EYE_CLOSED_THRESHOLD_MS) {
                 eyesCurrentlyClosed = false
-                onFatigueDetected("Drowsiness detected")
+                onFatigueDetected("Microsleep detected")
             }
-        } else { eyesCurrentlyClosed = false }
+        } else {
+            if (eyesCurrentlyClosed) {
+                eyesCurrentlyClosed = false
+                blinkTimestamps.addLast(now)
+                while (blinkTimestamps.isNotEmpty() && now - blinkTimestamps.first() > FATIGUE_WINDOW_MS) {
+                    blinkTimestamps.removeFirst()
+                }
+                if (blinkTimestamps.size >= 5 && blinkTimestamps.size < BLINK_RATE_DROWSY) {
+                    onFatigueDetected("Low blink rate - possible drowsiness")
+                }
+            }
+        }
     }
 
     private fun onCrashDetected(gForce: Float) {
         localBroadcastManager.sendBroadcast(Intent(ACTION_CRASH_DETECTED).putExtra(EXTRA_DETECTION_TYPE, "CRASH"))
-        triggerAutoSOSCountdown("Vehicle Crash")
+        triggerAutoSOSCountdown("Vehicle Crash (${String.format("%.1f", gForce)}G)")
     }
 
     private fun onFallDetected(gForce: Float, duration: Long) {
         localBroadcastManager.sendBroadcast(Intent(ACTION_FALL_DETECTED).putExtra(EXTRA_DETECTION_TYPE, "FALL"))
-        triggerAutoSOSCountdown("Fall Detected")
+        triggerAutoSOSCountdown("Fall Detected (${duration}ms freefall)")
     }
 
     private fun onShakeSOS() {
         sendBroadcast(Intent(SOSBroadcastReceiver.ACTION_AUTO_SOS_FIRE).apply { putExtra("reason", "Shake SOS") })
+        updateNotification("🆘 Shake SOS triggered!")
     }
 
     private fun onFatigueDetected(reason: String) {
         localBroadcastManager.sendBroadcast(Intent(ACTION_FATIGUE_DETECTED).putExtra("reason", reason))
+        updateNotification("⚠️ Fatigue Warning: $reason")
     }
 
     private fun triggerAutoSOSCountdown(reason: String) {
@@ -341,7 +357,7 @@ class AccidentDetectorService : Service(), SensorEventListener, LifecycleOwner {
         countdownActive = false
         countdownJob?.cancel()
         localBroadcastManager.sendBroadcast(Intent(ACTION_AUTO_SOS_CANCELLED))
-        updateNotification("SOS Cancelled")
+        updateNotification("Auto-SOS Cancelled")
     }
 
     private fun createNotificationChannel() {
@@ -353,10 +369,11 @@ class AccidentDetectorService : Service(), SensorEventListener, LifecycleOwner {
 
     private fun buildNotification(text: String, showCancel: Boolean = false): Notification {
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Aegis Safety")
+            .setContentTitle("Aegis Safety Monitor")
             .setContentText(text)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setOngoing(true)
 
         if (showCancel) {
             val cancelIntent = Intent(this, AccidentDetectorService::class.java).apply { action = ACTION_CANCEL_COUNTDOWN }

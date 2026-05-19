@@ -39,6 +39,7 @@
 
     <!-- Boot completed (auto-start services) -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.intent.action.BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.QUICKBOOT_POWERON" />
 
     <!-- Media button (headphone SOS) -->
@@ -118,6 +119,7 @@
                 <action android:name="android.intent.action.SCREEN_OFF" />
                 <action android:name="android.intent.action.MEDIA_BUTTON" />
                 <action android:name="android.media.VOLUME_CHANGED_ACTION" />
+                <action android:name="com.karthik.aegis.AUTO_SOS_FIRE" />
             </intent-filter>
         </receiver>
 

@@ -1,92 +1,47 @@
 package com.karthik.aegis.utils
 
 import android.content.Context
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+import javax.inject.Singleton
 
-private val Context.dataStore by preferencesDataStore("aegis_prefs")
-
-class AegisPrefs(private val context: Context) {
+@Singleton
+class AegisPrefs @Inject constructor(private val context: Context) {
 
     companion object {
-        private val LOCATION_TRACKING_ENABLED = booleanPreferencesKey("location_tracking_enabled")
-        private val ACCIDENT_DETECTION_ENABLED = booleanPreferencesKey("accident_detection_enabled")
-        private val FATIGUE_DETECTION_ENABLED = booleanPreferencesKey("fatigue_detection_enabled")
-        private val HOME_WIFI_SSID = stringPreferencesKey("home_wifi_ssid")
-        private val NIGHT_MODE_ENABLED = booleanPreferencesKey("night_mode_enabled")
-        private val EMERGENCY_CONTACTS_COUNT = stringPreferencesKey("emergency_contacts_count")
+        private const val PREF_NAME = "aegis_settings"
+        private const val KEY_LOCATION_TRACKING = "location_tracking_enabled"
+        private const val KEY_ACCIDENT_DETECTION = "accident_detection_enabled"
+        private const val KEY_FATIGUE_DETECTION = "fatigue_detection_enabled"
+        private const val KEY_HOME_WIFI = "home_wifi_ssid"
+        private const val KEY_NIGHT_MODE = "night_mode_enabled"
+        private const val KEY_FCM_TOKEN = "fcm_token"
+        private const val KEY_USER_ID = "current_user_id"
+        private const val KEY_FAMILY_GROUP_ID = "family_group_id"
     }
 
-    fun isLocationTrackingEnabled(): Boolean {
-        return context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
-            .getBoolean(LOCATION_TRACKING_ENABLED.name, false)
-    }
+    private val prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
 
-    fun setLocationTrackingEnabled(enabled: Boolean) {
-        context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
-            .edit().putBoolean(LOCATION_TRACKING_ENABLED.name, enabled).apply()
-    }
+    fun isLocationTrackingEnabled(): Boolean = prefs.getBoolean(KEY_LOCATION_TRACKING, false)
+    fun setLocationTrackingEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_LOCATION_TRACKING, enabled).apply()
 
-    fun isAccidentDetectionEnabled(): Boolean {
-        return context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
-            .getBoolean(ACCIDENT_DETECTION_ENABLED.name, true)
-    }
+    fun isAccidentDetectionEnabled(): Boolean = prefs.getBoolean(KEY_ACCIDENT_DETECTION, true)
+    fun setAccidentDetectionEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_ACCIDENT_DETECTION, enabled).apply()
 
-    fun setAccidentDetectionEnabled(enabled: Boolean) {
-        context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
-            .edit().putBoolean(ACCIDENT_DETECTION_ENABLED.name, enabled).apply()
-    }
+    fun isFatigueDetectionEnabled(): Boolean = prefs.getBoolean(KEY_FATIGUE_DETECTION, false)
+    fun setFatigueDetectionEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_FATIGUE_DETECTION, enabled).apply()
 
-    fun isFatigueDetectionEnabled(): Boolean {
-        return context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
-            .getBoolean(FATIGUE_DETECTION_ENABLED.name, false)
-    }
+    fun getHomeWifiSSID(): String? = prefs.getString(KEY_HOME_WIFI, null)
+    fun setHomeWifiSSID(ssid: String) = prefs.edit().putString(KEY_HOME_WIFI, ssid).apply()
 
-    fun setFatigueDetectionEnabled(enabled: Boolean) {
-        context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
-            .edit().putBoolean(FATIGUE_DETECTION_ENABLED.name, enabled).apply()
-    }
+    fun isNightModeEnabled(): Boolean = prefs.getBoolean(KEY_NIGHT_MODE, true)
+    fun setNightModeEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_NIGHT_MODE, enabled).apply()
 
-    fun getHomeWifiSSID(): String? {
-        return context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
-            .getString(HOME_WIFI_SSID.name, null)
-    }
+    fun getUserFCMToken(): String? = prefs.getString(KEY_FCM_TOKEN, null)
+    fun setUserFCMToken(token: String) = prefs.edit().putString(KEY_FCM_TOKEN, token).apply()
 
-    fun setHomeWifiSSID(ssid: String) {
-        context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
-            .edit().putString(HOME_WIFI_SSID.name, ssid).apply()
-    }
+    fun getCurrentUserId(): String? = prefs.getString(KEY_USER_ID, null)
+    fun setCurrentUserId(userId: String) = prefs.edit().putString(KEY_USER_ID, userId).apply()
 
-    fun isNightModeEnabled(): Boolean {
-        return context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
-            .getBoolean(NIGHT_MODE_ENABLED.name, true)
-    }
-
-    fun setNightModeEnabled(enabled: Boolean) {
-        context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
-            .edit().putBoolean(NIGHT_MODE_ENABLED.name, enabled).apply()
-    }
-
-    fun getUserFCMToken(): String? {
-        return context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
-            .getString("fcm_token", null)
-    }
-
-    fun setUserFCMToken(token: String) {
-        context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
-            .edit().putString("fcm_token", token).apply()
-    }
-
-    fun getCurrentUserId(): String? {
-        return context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
-            .getString("current_user_id", null)
-    }
-
-    fun setCurrentUserId(userId: String) {
-        context.getSharedPreferences("aegis", Context.MODE_PRIVATE)
-            .edit().putString("current_user_id", userId).apply()
-    }
+    fun getFamilyGroupId(): String? = prefs.getString(KEY_FAMILY_GROUP_ID, null)
+    fun setFamilyGroupId(groupId: String) = prefs.edit().putString(KEY_FAMILY_GROUP_ID, groupId).apply()
 }

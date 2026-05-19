@@ -165,7 +165,7 @@ fun SOSScreen(
                             modifier = Modifier.size(24.dp)
                         )
                     } else {
-                        Icon(Icons.Default.SosOutline, "Trigger", modifier = Modifier.size(24.dp))
+                        SosOutlineIcon()
                         Spacer(modifier = Modifier.width(12.dp))
                         Text("TRIGGER SOS", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }

@@ -30,7 +30,8 @@ class SOSBroadcastReceiver : BroadcastReceiver() {
         val reason = intent.getStringExtra("reason") ?: "Emergency SOS"
 
         // Run in background scope
-        GlobalScope.launch(Dispatchers.IO) {
+        val pendingResult = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
             try {
                 val auth = FirebaseAuth.getInstance()
                 val uid = auth.currentUser?.uid ?: return@launch
@@ -51,6 +52,8 @@ class SOSBroadcastReceiver : BroadcastReceiver() {
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "SOS error: ${e.message}")
+            } finally {
+                pendingResult.finish()
             }
         }
     }

@@ -11,10 +11,10 @@ object DistanceUtils {
      * @return distance in meters
      */
     fun distanceMeters(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        val lat1Rad = lat1.toRad()
-        val lat2Rad = lat2.toRad()
-        val deltaLat = (lat2 - lat1).toRad()
-        val deltaLon = (lon2 - lon1).toRad()
+        val lat1Rad = Math.toRadians(lat1)
+        val lat2Rad = Math.toRadians(lat2)
+        val deltaLat = Math.toRadians(lat2 - lat1)
+        val deltaLon = Math.toRadians(lon2 - lon1)
 
         val a = sin(deltaLat / 2).pow(2) +
                 cos(lat1Rad) * cos(lat2Rad) * sin(deltaLon / 2).pow(2)
@@ -42,15 +42,15 @@ object DistanceUtils {
      * Get bearing between two points (in degrees, 0-360)
      */
     fun bearing(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
-        val lat1Rad = lat1.toRad()
-        val lat2Rad = lat2.toRad()
-        val deltaLon = (lon2 - lon1).toRad()
+        val lat1Rad = Math.toRadians(lat1)
+        val lat2Rad = Math.toRadians(lat2)
+        val deltaLon = Math.toRadians(lon2 - lon1)
 
         val x = sin(deltaLon) * cos(lat2Rad)
         val y = cos(lat1Rad) * sin(lat2Rad) - sin(lat1Rad) * cos(lat2Rad) * cos(deltaLon)
 
         val bearingRad = atan2(x, y)
-        val bearingDeg = bearingRad.toDegrees()
+        val bearingDeg = Math.toDegrees(bearingRad)
 
         return (bearingDeg + 360) % 360
     }
@@ -70,6 +70,4 @@ object DistanceUtils {
         val timeSeconds = timeElapsedMs / 1000.0
         return (distanceMeters / timeSeconds).toFloat()
     }
-
-    private fun Double.toRad(): Double = this * Math.PI / 180.0
 }

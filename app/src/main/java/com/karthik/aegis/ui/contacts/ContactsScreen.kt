@@ -117,8 +117,8 @@ fun ContactsScreen(
                     editingContact = null
                 } else {
                     onAddContact(contact)
+                    showAddDialog = false
                 }
-                showAddDialog = false
             },
             onDismiss = {
                 showAddDialog = false
@@ -144,7 +144,6 @@ private fun ContactCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Avatar
             Surface(
                 shape = MaterialTheme.shapes.medium,
                 color = if (contact.isPrimary) 
@@ -165,7 +164,6 @@ private fun ContactCard(
                 }
             }
 
-            // Contact Info
             Column(
                 modifier = Modifier.weight(1f)
             ) {
@@ -200,26 +198,13 @@ private fun ContactCard(
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.outline
                 )
-
-                contact.relation.takeIf { it.isNotEmpty() }?.let {
-                    Text(
-                        "Relation: $it",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
             }
 
-            // Actions
-            IconButton(
-                onClick = { onEdit(contact) }
-            ) {
+            IconButton(onClick = { onEdit(contact) }) {
                 Icon(Icons.Default.Edit, "Edit")
             }
 
-            IconButton(
-                onClick = { onDelete(contact.id) }
-            ) {
+            IconButton(onClick = { onDelete(contact.id) }) {
                 Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
             }
         }

@@ -1,4 +1,4 @@
-package com.karthik.aegis.ui.home
+package com.karthik.aegis.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.ViewModel
@@ -10,6 +10,7 @@ import com.karthik.aegis.repository.FamilyRepository
 import com.karthik.aegis.repository.LocationRepository
 import com.karthik.aegis.repository.SOSRepository
 import com.karthik.aegis.service.LocationTrackingService
+import com.karthik.aegis.utils.AegisPrefs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
@@ -21,47 +22,39 @@ class HomeViewModel @Inject constructor(
     private val locationRepository: LocationRepository,
     private val familyRepository: FamilyRepository,
     private val sosRepository: SOSRepository,
+    private val prefs: AegisPrefs,
     @ApplicationContext private val context: Application
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    private val groupId = prefs.getFamilyGroupId() ?: "global"
+
     val familyMembers: StateFlow<List<FamilyMember>> = familyRepository
-        .observeFamilyMembers("global")
+        .observeFamilyMembers(groupId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val familyLocations: StateFlow<Map<String, TrackedLocation>> = locationRepository
-        .observeFamilyLocations("global")
+        .observeFamilyLocations(groupId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     val activeAlerts: StateFlow<List<SOSAlert>> = sosRepository
-        .observeSOSAlerts("global")
+        .observeSOSAlerts(groupId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    init {
-        viewModelScope.launch {
-            try {
-                val members = familyRepository.observeFamilyMembers("global").first()
-                _uiState.value = _uiState.value.copy(isLoading = false)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
-            }
-        }
-    }
 
     fun startLocationTracking() {
         LocationTrackingService.startTracking(context)
+        prefs.setLocationTrackingEnabled(true)
     }
 
     fun stopLocationTracking() {
         LocationTrackingService.stopTracking(context)
+        prefs.setLocationTrackingEnabled(false)
     }
 }
 
 data class HomeUiState(
-    val currentUserName: String = "",
-    val isTrackingEnabled: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null
 )

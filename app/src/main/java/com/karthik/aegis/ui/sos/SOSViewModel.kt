@@ -2,10 +2,10 @@ package com.karthik.aegis.ui.sos
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.karthik.aegis.model.EmergencyContact
 import com.karthik.aegis.model.SOSAlert
 import com.karthik.aegis.repository.ContactsRepository
 import com.karthik.aegis.repository.SOSRepository
+import com.karthik.aegis.utils.AegisPrefs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -14,14 +14,17 @@ import javax.inject.Inject
 @HiltViewModel
 class SOSViewModel @Inject constructor(
     private val sosRepository: SOSRepository,
-    private val contactsRepository: ContactsRepository
+    private val contactsRepository: ContactsRepository,
+    private val prefs: AegisPrefs
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SOSUiState())
     val uiState: StateFlow<SOSUiState> = _uiState.asStateFlow()
 
+    private val groupId = prefs.getFamilyGroupId() ?: "global"
+
     val activeAlerts: StateFlow<List<SOSAlert>> = sosRepository
-        .observeSOSAlerts("global")
+        .observeSOSAlerts(groupId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun triggerSOS(reason: String, latitude: Double = 0.0, longitude: Double = 0.0) {

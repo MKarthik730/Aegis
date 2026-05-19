@@ -1,7 +1,6 @@
 package com.karthik.aegis.ui.home
 
 import android.content.Context
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,7 +18,8 @@ import com.karthik.aegis.model.FamilyMember
 import com.karthik.aegis.model.SOSAlert
 import com.karthik.aegis.model.TrackedLocation
 import com.karthik.aegis.service.LocationTrackingService
-import com.karthik.aegis.utils.DistanceUtils
+import com.karthik.aegis.viewmodel.HomeUiState
+import com.karthik.aegis.viewmodel.HomeViewModel
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,7 +41,6 @@ fun HomeScreen(
                 title = { Text("Aegis • Family Safety") },
                 actions = {
                     IconButton(onClick = onSignOut) {
-                        // Fixed: LogOut changed to Logout (or ExitToApp)
                         Icon(Icons.Default.ExitToApp, "Sign Out")
                     }
                 }
@@ -70,9 +69,7 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
                     ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp)
-                        ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
                             Text(
                                 "🚨 ACTIVE ALERTS (${activeAlerts.size})",
                                 fontSize = 14.sp,
@@ -100,9 +97,7 @@ fun HomeScreen(
                 ) {
                     Button(
                         onClick = onNavigateToSOS,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(50.dp),
+                        modifier = Modifier.weight(1f).height(50.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                     ) {
                         Icon(Icons.Default.Warning, "SOS", modifier = Modifier.size(20.dp))
@@ -112,9 +107,7 @@ fun HomeScreen(
 
                     Button(
                         onClick = onNavigateToContacts,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(50.dp)
+                        modifier = Modifier.weight(1f).height(50.dp)
                     ) {
                         Icon(Icons.Default.Person, "Contacts", modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
@@ -125,9 +118,7 @@ fun HomeScreen(
                         onClick = {
                             LocationTrackingService.startTracking(context, LocationTrackingService.MODE_ACTIVE)
                         },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(50.dp)
+                        modifier = Modifier.weight(1f).height(50.dp)
                     ) {
                         Icon(Icons.Default.LocationOn, "Track", modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
@@ -136,7 +127,7 @@ fun HomeScreen(
                 }
             }
 
-            // Family Members Section
+            // Family Members Header
             item {
                 Text(
                     "👨‍👩‍👧‍👦 Family (${familyMembers.size})",
@@ -145,32 +136,27 @@ fun HomeScreen(
                 )
             }
 
-            items(familyMembers) { member ->
-                FamilyMemberCard(member, familyLocations[member.uid])
-            }
-
+            // Member Cards
             if (familyMembers.isEmpty()) {
                 item {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
+                        modifier = Modifier.fillMaxWidth().padding(32.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
-                                // Fixed: PersonAdd changed to Person
                                 Icons.Default.Person,
                                 "No members",
                                 modifier = Modifier.size(48.dp),
                                 tint = MaterialTheme.colorScheme.outline
                             )
-                            Text(
-                                "No family members yet",
-                                modifier = Modifier.padding(top = 12.dp)
-                            )
+                            Text("No family members yet", modifier = Modifier.padding(top = 12.dp))
                         }
                     }
+                }
+            } else {
+                items(familyMembers) { member ->
+                    FamilyMemberCard(member, familyLocations[member.uid])
                 }
             }
         }
@@ -179,17 +165,12 @@ fun HomeScreen(
 
 @Composable
 private fun FamilyMemberCard(member: FamilyMember, location: TrackedLocation?) {
-    Card(
-        modifier = Modifier.fillMaxWidth()
-    ) {
+    Card(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Avatar
             Surface(
                 shape = MaterialTheme.shapes.medium,
                 color = when (member.status) {
@@ -198,10 +179,7 @@ private fun FamilyMemberCard(member: FamilyMember, location: TrackedLocation?) {
                     else -> MaterialTheme.colorScheme.surfaceVariant
                 }
             ) {
-                Box(
-                    modifier = Modifier.size(40.dp),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
                     Text(
                         member.name.firstOrNull()?.toString() ?: "?",
                         color = Color.White,
@@ -211,34 +189,16 @@ private fun FamilyMemberCard(member: FamilyMember, location: TrackedLocation?) {
                 }
             }
 
-            // Member Info
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    member.name,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    "Status: ${member.status}",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.outline
-                )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(member.name, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("Status: ${member.status}", fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
                 location?.let {
                     val speed = it.speed.roundToInt()
-                    Text(
-                        "Speed: ${speed}m/s | Mode: ${it.mode}",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.outline
-                    )
+                    Text("Speed: ${speed}m/s | Mode: ${it.mode}", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
                 }
             }
 
-            // Call Button
-            IconButton(
-                onClick = { /* Start call to member */ }
-            ) {
+            IconButton(onClick = { /* Start call */ }) {
                 Icon(Icons.Default.Call, "Call")
             }
         }

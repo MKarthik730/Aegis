@@ -11,10 +11,14 @@ import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.karthik.aegis.R
+import com.karthik.aegis.utils.AegisPrefs
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class AegisFirebaseMessagingService : FirebaseMessagingService() {
+
+    @Inject lateinit var aegisPrefs: AegisPrefs
 
     companion object {
         private const val TAG = "AegisMessaging"
@@ -91,8 +95,7 @@ class AegisFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     private fun saveFCMToken(token: String) {
-        val prefs = this.getSharedPreferences("aegis_prefs", Context.MODE_PRIVATE)
-        prefs.edit().putString("fcm_token", token).apply()
+        aegisPrefs.setUserFCMToken(token)
         Log.d(TAG, "FCM token saved to preferences")
     }
 }
