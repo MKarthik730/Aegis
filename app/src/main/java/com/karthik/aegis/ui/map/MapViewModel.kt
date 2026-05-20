@@ -2,6 +2,7 @@ package com.karthik.aegis.ui.map
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
 import com.karthik.aegis.model.FamilyMember
 import com.karthik.aegis.model.SafeZone
 import com.karthik.aegis.model.TrackedLocation
@@ -21,6 +22,8 @@ class MapViewModel @Inject constructor(
     private val prefs: AegisPrefs
 ) : ViewModel() {
 
+    val currentUserUid: String = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+
     private val groupId = prefs.getFamilyGroupId() ?: "global"
 
     val familyMembers: StateFlow<List<FamilyMember>> = familyRepository
@@ -34,20 +37,4 @@ class MapViewModel @Inject constructor(
     val safeZones: StateFlow<List<SafeZone>> = zoneRepository
         .observeSafeZones()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    private val _selectedMember = MutableStateFlow<FamilyMember?>(null)
-    val selectedMember: StateFlow<FamilyMember?> = _selectedMember.asStateFlow()
-
-    private val _selectedMemberLocation = MutableStateFlow<TrackedLocation?>(null)
-    val selectedMemberLocation: StateFlow<TrackedLocation?> = _selectedMemberLocation.asStateFlow()
-
-    fun selectMember(member: FamilyMember) {
-        _selectedMember.value = member
-        _selectedMemberLocation.value = familyLocations.value[member.uid]
-    }
-
-    fun clearSelection() {
-        _selectedMember.value = null
-        _selectedMemberLocation.value = null
-    }
 }

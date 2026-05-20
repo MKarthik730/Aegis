@@ -21,11 +21,6 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        val localProps = Properties().apply {
-            val f = rootProject.file("local.properties")
-            if (f.exists()) load(f.inputStream())
-        }
-        manifestPlaceholders["MAPS_API_KEY"] = localProps.getProperty("MAPS_API_KEY", "")
     }
 
     buildFeatures {
@@ -103,8 +98,10 @@ dependencies {
 
     // Google Play Services
     implementation("com.google.android.gms:play-services-location:21.1.0")
-    implementation("com.google.android.gms:play-services-maps:19.0.0")
-    implementation("com.google.maps.android:maps-compose:4.4.1")
+
+    // OpenStreetMap (osmdroid) — no API key required
+    implementation("org.osmdroid:osmdroid-android:6.1.17")
+    implementation("org.osmdroid:osmdroid-wms:6.1.17")
 
     // Camera & ML Kit
     implementation("androidx.camera:camera-core:1.4.1")

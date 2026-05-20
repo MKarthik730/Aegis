@@ -174,8 +174,7 @@ fun MainTabScreen(
     val mapFamilyMembers by mapViewModel.familyMembers.collectAsStateWithLifecycle()
     val mapFamilyLocations by mapViewModel.familyLocations.collectAsStateWithLifecycle()
     val safeZones by mapViewModel.safeZones.collectAsStateWithLifecycle()
-    val selectedMember by mapViewModel.selectedMember.collectAsStateWithLifecycle()
-    val selectedMemberLocation by mapViewModel.selectedMemberLocation.collectAsStateWithLifecycle()
+    val currentUserUid by remember { mutableStateOf(mapViewModel.currentUserUid) }
 
     val sosUiState by sosViewModel.uiState.collectAsStateWithLifecycle()
     val sosActiveAlerts by sosViewModel.activeAlerts.collectAsStateWithLifecycle()
@@ -280,10 +279,7 @@ fun MainTabScreen(
                         familyMembers = mapFamilyMembers,
                         familyLocations = mapFamilyLocations,
                         safeZones = safeZones,
-                        selectedMember = selectedMember,
-                        selectedMemberLocation = selectedMemberLocation,
-                        onSelectMember = { mapViewModel.selectMember(it) },
-                        onClearSelection = { mapViewModel.clearSelection() },
+                        currentUserUid = currentUserUid,
                         onNavigateBack = { onTabSelected("home") }
                     )
 

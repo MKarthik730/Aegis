@@ -1,7 +1,9 @@
 package com.karthik.aegis.ui.map
 
-import androidx.compose.animation.*
-import androidx.compose.foundation.background
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Typeface
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,20 +15,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.CircleOptions
-import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.compose.*
+import androidx.compose.ui.viewinterop.AndroidView
 import com.karthik.aegis.model.FamilyMember
 import com.karthik.aegis.model.SafeZone
 import com.karthik.aegis.model.TrackedLocation
-import java.text.SimpleDateFormat
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polygon
+import org.osmdroid.views.overlay.ScaleBarOverlay
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,40 +38,29 @@ fun MapScreen(
     familyMembers: List<FamilyMember>,
     familyLocations: Map<String, TrackedLocation>,
     safeZones: List<SafeZone>,
-    selectedMember: FamilyMember?,
-    selectedMemberLocation: TrackedLocation?,
-    onSelectMember: (FamilyMember) -> Unit,
-    onClearSelection: () -> Unit,
+    currentUserUid: String,
     onNavigateBack: () -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var showSheet by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var selectedMember by remember { mutableStateOf<FamilyMember?>(null) }
+    var selectedLocation by remember { mutableStateOf<TrackedLocation?>(null) }
+    val mapViewRef = remember { mutableStateOf<MapView?>(null) }
 
-    // Build member location items
-    val memberMapItems = familyMembers.mapNotNull { member ->
-        familyLocations[member.uid]?.let { loc ->
-            MemberMapItem(member, LatLng(loc.latitude, loc.longitude))
+    // Initialize osmdroid config once
+    LaunchedEffect(Unit) {
+        Configuration.getInstance().apply {
+            load(context, context.getSharedPreferences("osmdroid", 0))
+            userAgentValue = context.packageName
         }
     }
 
-    // Default camera centered on first member or default location
-    val defaultCenter = if (memberMapItems.isNotEmpty()) {
-        val avgLat = memberMapItems.map { it.latLng.latitude }.average()
-        val avgLng = memberMapItems.map { it.latLng.longitude }.average()
-        LatLng(avgLat, avgLng)
-    } else {
-        LatLng(12.9716, 77.5946)
-    }
-
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(defaultCenter, 11f)
-    }
-
-    // Open bottom sheet when a member is selected
-    LaunchedEffect(selectedMember) {
-        if (selectedMember != null) {
-            showSheet = true
-        }
+    // Compute default center
+    val defaultCenter = remember(familyLocations, currentUserUid, familyMembers) {
+        familyLocations[currentUserUid]?.let {
+            GeoPoint(it.latitude, it.longitude)
+        } ?: familyMembers.firstNotNullOfOrNull { member ->
+            familyLocations[member.uid]?.let { GeoPoint(it.latitude, it.longitude) }
+        } ?: GeoPoint(20.5937, 78.9629)
     }
 
     Scaffold(
@@ -91,78 +83,95 @@ fun MapScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            GoogleMap(
+            // osmdroid MapView embedded via AndroidView
+            AndroidView(
                 modifier = Modifier.fillMaxSize(),
-                cameraPositionState = cameraPositionState,
-                uiSettings = MapUiSettings(zoomControlsEnabled = true),
-                onMapClick = {
-                    showSheet = false
-                    onClearSelection()
-                }
-            ) {
-                // Family member markers with initials
-                memberMapItems.forEach { item ->
-                    val initials = item.member.name
-                        .split(" ")
-                        .filter { it.isNotEmpty() }
-                        .take(2)
-                        .joinToString("") { it.first().uppercase() }
+                factory = { ctx ->
+                    MapView(ctx).apply {
+                        setTileSource(TileSourceFactory.MAPNIK)
+                        setMultiTouchControls(true)
+                        controller.setZoom(15.0)
+                        controller.setCenter(defaultCenter)
+                        zoomController.setVisibility(
+                            org.osmdroid.views.CustomZoomButtonsController.Visibility.SHOW_AND_FADEOUT
+                        )
 
-                    MarkerInfoWindowContent(
-                        state = MarkerState(position = item.latLng),
-                        title = item.member.name,
-                        snippet = item.member.status,
-                        onClick = {
-                            onSelectMember(item.member)
-                            showSheet = true
-                            false // let info window show
+                        // Scale bar
+                        val scaleBar = ScaleBarOverlay(this)
+                        scaleBar.setAlignBottom(true)
+                        scaleBar.setAlignRight(true)
+                        overlays.add(scaleBar)
+
+                        mapViewRef.value = this
+                    }
+                },
+                update = { mapView ->
+                    // Clear old overlays except scale bar (index 0)
+                    while (mapView.overlays.size > 1) {
+                        mapView.overlays.removeAt(1)
+                    }
+
+                    // Draw safe zones as Polygon circles
+                    safeZones.forEach { zone ->
+                        val zoneGeo = GeoPoint(zone.latitude, zone.longitude)
+                        val zoneColor = if (zone.isHome) 0xFF2979FF.toInt() else 0xFF00C853.toInt()
+
+                        val polygon = Polygon().apply {
+                            points = buildCirclePoints(zoneGeo, zone.radiusMeters)
+                            fillColor = (zoneColor and 0x00FFFFFF) or (0x4D shl 24) // 30% opacity
+                            strokeColor = zoneColor
+                            strokeWidth = 3f
+                            title = zone.name
                         }
-                    ) {
-                        // Custom marker with initials
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    when (item.member.status) {
-                                        "SAFE" -> Color(0xFF4CAF50)
-                                        "UNSAFE" -> Color(0xFFFF3D3D)
-                                        else -> Color(0xFF2979FF)
-                                    }
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                initials,
-                                color = Color.White,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = TextAlign.Center
+                        mapView.overlays.add(polygon)
+                    }
+
+                    // Draw family member markers
+                    familyMembers.forEach { member ->
+                        val location = familyLocations[member.uid] ?: return@forEach
+                        val isCurrentUser = member.uid == currentUserUid
+                        val geo = GeoPoint(location.latitude, location.longitude)
+
+                        val circleColor = when {
+                            isCurrentUser -> 0xFF2196F3.toInt()
+                            member.status == "SAFE" -> 0xFF4CAF50.toInt()
+                            member.status == "UNSAFE" -> 0xFFF44336.toInt()
+                            else -> 0xFF9E9E9E.toInt()
+                        }
+                        val size = if (isCurrentUser) 96 else 80
+                        val label = if (isCurrentUser) "Me" else member.name
+                            .split(" ")
+                            .filter { it.isNotEmpty() }
+                            .take(2)
+                            .joinToString("") { it.first().uppercase() }
+
+                        val iconBitmap = createCircleBitmap(size, circleColor, label)
+
+                        Marker(mapView).apply {
+                            position = geo
+                            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                            icon = android.graphics.drawable.BitmapDrawable(
+                                mapView.context.resources, iconBitmap
                             )
+                            title = member.name
+                            snippet = "Status: ${member.status} | Speed: ${location.speed.toInt()} m/s"
+                            setInfoWindow(org.osmdroid.views.overlay.infowindow.MarkerInfoWindow(
+                                org.osmdroid.library.R.layout.layout_bubble_infowindow, mapView
+                            ))
+                            setOnMarkerClickListener { _, _ ->
+                                selectedMember = member
+                                selectedLocation = location
+                                true
+                            }
+                            mapView.overlays.add(this)
                         }
                     }
-                }
 
-                // Safe zones as circles on the map
-                safeZones.forEach { zone ->
-                    val zoneColor = when (zone.type) {
-                        "HOME" -> Color(0xFF2979FF)
-                        "SCHOOL" -> Color(0xFFFFA000)
-                        "WORK" -> Color(0xFF7C4DFF)
-                        else -> Color(0xFF00C853)
-                    }
-                    val latLng = LatLng(zone.latitude, zone.longitude)
-                    Circle(
-                        center = latLng,
-                        radius = zone.radiusMeters,
-                        fillColor = zoneColor.copy(alpha = 0.15f),
-                        strokeColor = zoneColor.copy(alpha = 0.6f),
-                        strokeWidth = 3f
-                    )
+                    mapView.invalidate()
                 }
-            }
+            )
 
-            // Legend overlay
+            // Legend overlay (top-right)
             Surface(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -177,12 +186,13 @@ fun MapScreen(
                 ) {
                     Text("Legend", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     LegendRow(Color(0xFF4CAF50), "Safe")
-                    LegendRow(Color(0xFFFF3D3D), "Unsafe")
-                    LegendRow(Color(0xFF2979FF), "Member")
+                    LegendRow(Color(0xFFF44336), "Unsafe")
+                    LegendRow(Color(0xFF2196F3), "You")
+                    LegendRow(Color(0xFF9E9E9E), "Unknown")
                 }
             }
 
-            // Member count overlay
+            // Online count (bottom-left)
             Surface(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
@@ -196,9 +206,14 @@ fun MapScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Icon(Icons.Default.People, "Members", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                    Icon(
+                        Icons.Default.People, "Members",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    val onlineCount = familyMembers.count { it.uid in familyLocations }
                     Text(
-                        "${memberMapItems.size}/${familyMembers.size} online",
+                        "$onlineCount/${familyMembers.size} online",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -208,27 +223,73 @@ fun MapScreen(
     }
 
     // Bottom Sheet for selected member
-    if (showSheet && selectedMember != null) {
+    if (selectedMember != null) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(
             onDismissRequest = {
-                showSheet = false
-                onClearSelection()
+                selectedMember = null
+                selectedLocation = null
             },
             sheetState = sheetState,
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             containerColor = MaterialTheme.colorScheme.surface
         ) {
             MemberDetailSheet(
-                member = selectedMember,
-                location = selectedMemberLocation,
-                onCall = { /* Call member */ },
+                member = selectedMember!!,
+                location = selectedLocation,
                 onDismiss = {
-                    showSheet = false
-                    onClearSelection()
+                    selectedMember = null
+                    selectedLocation = null
                 }
             )
         }
     }
+
+    // Map lifecycle
+    DisposableEffect(Unit) {
+        mapViewRef.value?.onResume()
+        onDispose {
+            mapViewRef.value?.onPause()
+        }
+    }
+}
+
+private fun createCircleBitmap(size: Int, color: Int, text: String): Bitmap {
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+    // Fill circle
+    paint.color = color
+    paint.style = Paint.Style.FILL
+    canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
+
+    // White border
+    paint.color = 0xFFFFFFFF.toInt()
+    paint.style = Paint.Style.STROKE
+    paint.strokeWidth = 3f
+    canvas.drawCircle(size / 2f, size / 2f, size / 2f - 2f, paint)
+
+    // Text
+    paint.color = 0xFFFFFFFF.toInt()
+    paint.style = Paint.Style.FILL
+    paint.textAlign = Paint.Align.CENTER
+    paint.typeface = Typeface.DEFAULT_BOLD
+    paint.textSize = size * 0.38f
+    val yPos = (size / 2f) - ((paint.descent() + paint.ascent()) / 2f)
+    canvas.drawText(text.ifEmpty { "?" }, size / 2f, yPos, paint)
+
+    return bitmap
+}
+
+private fun buildCirclePoints(center: GeoPoint, radiusMeters: Double): List<GeoPoint> {
+    val points = mutableListOf<GeoPoint>()
+    val segments = 36
+    for (i in 0 until segments) {
+        val bearing = (360.0 / segments) * i
+        points.add(center.destinationPoint(radiusMeters, bearing.toFloat()))
+    }
+    return points
 }
 
 @Composable
@@ -251,7 +312,6 @@ private fun LegendRow(color: Color, label: String) {
 private fun MemberDetailSheet(
     member: FamilyMember,
     location: TrackedLocation?,
-    onCall: () -> Unit,
     onDismiss: () -> Unit
 ) {
     Column(
@@ -261,18 +321,16 @@ private fun MemberDetailSheet(
             .padding(bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Member header
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Avatar
             Surface(
                 modifier = Modifier.size(64.dp),
                 shape = CircleShape,
                 color = when (member.status) {
                     "SAFE" -> Color(0xFF4CAF50)
-                    "UNSAFE" -> Color(0xFFFF3D3D)
+                    "UNSAFE" -> Color(0xFFF44336)
                     else -> MaterialTheme.colorScheme.primary
                 }
             ) {
@@ -285,7 +343,6 @@ private fun MemberDetailSheet(
                     )
                 }
             }
-
             Column {
                 Text(member.name, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Row(
@@ -297,7 +354,7 @@ private fun MemberDetailSheet(
                         shape = CircleShape,
                         color = when (member.status) {
                             "SAFE" -> Color(0xFF4CAF50)
-                            "UNSAFE" -> Color(0xFFFF3D3D)
+                            "UNSAFE" -> Color(0xFFF44336)
                             else -> Color(0xFF9E9E9E)
                         }
                     ) {}
@@ -309,10 +366,8 @@ private fun MemberDetailSheet(
                 }
             }
         }
-
         HorizontalDivider()
 
-        // Location details
         location?.let { loc ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -324,24 +379,28 @@ private fun MemberDetailSheet(
             }
         }
 
-        // Last seen
         if (member.lastSeen > 0) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Icon(Icons.Default.Schedule, "Time", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.outline)
-                Text(
-                    "Last seen: ${SimpleDateFormat(\"MMM dd, HH:mm\", Locale.getDefault()).format(Date(member.lastSeen))}",
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.outline
-                )
+                Text(getRelativeTime(member.lastSeen), fontSize = 13.sp, color = MaterialTheme.colorScheme.outline)
             }
         }
 
-        // Call button
+        location?.let { loc ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(Icons.Default.DirectionsRun, "Mode", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.outline)
+                Text("Mode: ${loc.mode} | Alt: ${loc.altitude.toInt()}m", fontSize = 13.sp, color = MaterialTheme.colorScheme.outline)
+            }
+        }
+
         Button(
-            onClick = onCall,
+            onClick = { /* Call member via platform intent */ },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
@@ -354,6 +413,19 @@ private fun MemberDetailSheet(
     }
 }
 
+private fun getRelativeTime(timestamp: Long): String {
+    val diff = System.currentTimeMillis() - timestamp
+    return when {
+        diff < 60_000 -> "Last seen: just now"
+        diff < 3_600_000 -> "Last seen: ${diff / 60_000} min ago"
+        diff < 86_400_000 -> "Last seen: ${diff / 3_600_000}h ago"
+        else -> {
+            val sdf = java.text.SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault())
+            "Last seen: ${sdf.format(Date(timestamp))}"
+        }
+    }
+}
+
 @Composable
 private fun DetailItem(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -361,8 +433,3 @@ private fun DetailItem(label: String, value: String) {
         Text(value, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
     }
 }
-
-private data class MemberMapItem(
-    val member: FamilyMember,
-    val latLng: LatLng
-)
