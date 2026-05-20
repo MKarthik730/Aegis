@@ -13,6 +13,7 @@ PHASE2_COMMITS.md
 # Sensitive files - never commit these
 app/google-services.json
 local.properties
+google-services.json
 gradle.properties
 
 # Build outputs

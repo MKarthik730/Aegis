@@ -39,11 +39,6 @@
 
     <!-- Boot completed (auto-start services) -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.intent.action.BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.QUICKBOOT_POWERON" />
-
-    <!-- Media button (headphone SOS) -->
-    <uses-permission android:name="android.permission.MEDIA_CONTENT_CONTROL" />
 
     <!-- Bluetooth (mesh network fallback) -->
     <uses-permission android:name="android.permission.BLUETOOTH" />
@@ -58,7 +53,7 @@
     <!-- Nearby devices (WiFi Aware) -->
     <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
         android:usesPermissionFlags="neverForLocation"
-        tools:targetApi="tiramisu" />
+        tools:targetApi="33" />
 
     <!-- Hardware features -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
@@ -111,12 +106,6 @@
             android:exported="true"
             android:directBootAware="true">
             <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
-                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
-                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
-                <action android:name="android.intent.action.SCREEN_ON" />
-                <action android:name="android.intent.action.SCREEN_OFF" />
                 <action android:name="android.intent.action.MEDIA_BUTTON" />
                 <action android:name="android.media.VOLUME_CHANGED_ACTION" />
                 <action android:name="com.karthik.aegis.AUTO_SOS_FIRE" />
@@ -143,10 +132,10 @@
             </intent-filter>
         </service>
 
-        <!-- Google Maps API Key -->
+        <!-- Google Maps API Key — read from local.properties via build.gradle.kts -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyDUMMYKEYFORBUILDINGONLY123456789" />
+            android:value="${MAPS_API_KEY}" />
 
         <!-- WorkManager Initializer -->
         <provider
