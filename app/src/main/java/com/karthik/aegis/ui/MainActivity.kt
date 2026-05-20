@@ -14,9 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.messaging.FirebaseMessaging
-import com.karthik.aegis.service.AccidentDetectorService
-import com.karthik.aegis.service.LocationTrackingService
 import com.karthik.aegis.ui.navigation.AegisNavHost
 import com.karthik.aegis.ui.theme.AegisTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -38,29 +37,31 @@ class MainActivity : ComponentActivity() {
         }
 
         if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
-            startLocationTracking()
+            Log.d(TAG, "Location permission granted")
         }
 
         if (permissions[Manifest.permission.CAMERA] == true) {
-            startAccidentDetection()
+            Log.d(TAG, "Camera permission granted")
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Initialize Splash Screen before super.onCreate()
         installSplashScreen()
-        
         super.onCreate(savedInstanceState)
 
-        // Request necessary permissions
         requestRequiredPermissions()
 
-        // Get/Update FCM token
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 val token = task.result
                 Log.d(TAG, "FCM Token: $token")
-                // TODO: Save to Firebase or prefs
+                // Save FCM token to Firebase Realtime Database
+                val currentUser = auth.currentUser
+                if (currentUser != null) {
+                    FirebaseDatabase.getInstance().reference
+                        .child("users").child(currentUser.uid).child("fcmToken")
+                        .setValue(token)
+                }
             }
         }
 
@@ -78,13 +79,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        
-        // Check if user is logged in
-        if (auth.currentUser != null) {
-            // Start services if user is logged in
-            startLocationTracking()
-            startAccidentDetection()
-        }
+        // Services are managed from the UI (HomeScreen toggle)
     }
 
     private fun requestRequiredPermissions() {
@@ -101,7 +96,6 @@ class MainActivity : ComponentActivity() {
             Manifest.permission.RECEIVE_BOOT_COMPLETED
         )
 
-        // Add background location for Android 10+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             permissions.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
         }
@@ -112,28 +106,6 @@ class MainActivity : ComponentActivity() {
 
         if (permissionsToRequest.isNotEmpty()) {
             requestPermissionsLauncher.launch(permissionsToRequest.toTypedArray())
-        }
-    }
-
-    private fun startLocationTracking() {
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-        ) {
-            LocationTrackingService.startTracking(this, LocationTrackingService.MODE_PASSIVE)
-            Log.d(TAG, "Location tracking started")
-        }
-    }
-
-    private fun startAccidentDetection() {
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.CAMERA
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-        ) {
-            AccidentDetectorService.start(this)
-            Log.d(TAG, "Accident detection started")
         }
     }
 }

@@ -17,6 +17,7 @@ import com.karthik.aegis.R
 import com.karthik.aegis.model.SafeZone
 import com.karthik.aegis.model.TrackedLocation
 import com.karthik.aegis.repository.LocationRepository
+import com.karthik.aegis.ui.MainActivity
 import com.karthik.aegis.utils.AegisPrefs
 import com.karthik.aegis.utils.DistanceUtils
 import dagger.hilt.android.AndroidEntryPoint
@@ -227,7 +228,7 @@ class LocationTrackingService : Service() {
         serviceScope.launch {
             try {
                 if (isNetworkAvailable()) {
-                    database.child("live_locations").child(uid).child(now.toString()).setValue(tracked).await()
+                    database.child("live_locations").child(uid).child("latest").setValue(tracked).await()
                     locationRepository.flushOfflineQueue(uid)
                 } else {
                     locationRepository.queueOfflineLocation(tracked)
@@ -363,7 +364,7 @@ class LocationTrackingService : Service() {
     }
 
     private fun buildNotification(text: String): Notification {
-        val intent = Intent(this, Class.forName("com.karthik.aegis.ui.MainActivity")).apply {
+        val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         val pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)

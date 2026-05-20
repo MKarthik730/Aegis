@@ -37,28 +37,29 @@ class SOSRepository @Inject constructor() {
         }
 
         try {
-            val alert = mapOf(
-                "uid"          to uid,
-                "senderName"   to (auth.currentUser?.displayName ?: "Family Member"),
-                "senderUid"    to uid,
-                "latitude"     to latitude,
-                "longitude"    to longitude,
-                "reason"       to reason,
-                "isAutomatic"  to isAutomatic,
-                "status"       to "ACTIVE",
-                "timestamp"    to System.currentTimeMillis()
+            val alert = SOSAlert(
+                uid = uid,
+                senderName = auth.currentUser?.displayName ?: "Family Member",
+                senderUid = uid,
+                latitude = latitude,
+                longitude = longitude,
+                reason = reason,
+                isAutomatic = isAutomatic,
+                status = "ACTIVE",
+                timestamp = System.currentTimeMillis()
             )
 
             realtimeDb.child("sos_alerts").child(uid).setValue(alert).await()
 
             // Queue FCM notifications via Firestore
+            val tokens = contacts.map { it.fcmToken }.filter { it.isNotEmpty() }
             val fcmData = mapOf(
                 "title"     to "🆘 SOS Alert!",
                 "body"      to "$reason — ${auth.currentUser?.displayName ?: "Family Member"} needs help!",
-                "tokens"    to contacts.map { it.fcmToken }.filter { it.isNotEmpty() },
+                "tokens"    to tokens,
                 "alertUid"  to uid
             )
-            if (contacts.any { it.fcmToken.isNotEmpty() }) {
+            if (tokens.isNotEmpty()) {
                 firestore.collection("fcm_queue").add(fcmData).await()
             }
 
@@ -101,7 +102,11 @@ class SOSRepository @Inject constructor() {
     }
 
     fun observeSOSAlerts(familyGroupId: String): Flow<List<SOSAlert>> = callbackFlow {
-        val ref = realtimeDb.child("sos_alerts")
+        val ref = if (familyGroupId.isNotEmpty() && familyGroupId != "global") {
+            realtimeDb.child("family_alerts").child(familyGroupId)
+        } else {
+            realtimeDb.child("sos_alerts")
+        }
         val query = ref.orderByChild("timestamp")
         
         val listener = object : ValueEventListener {

@@ -6,6 +6,7 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.karthik.aegis.data.local.dao.OfflineLocationDao
+import com.karthik.aegis.model.FamilyMember
 import com.karthik.aegis.model.TrackedLocation
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -16,7 +17,8 @@ import javax.inject.Singleton
 
 @Singleton
 class LocationRepository @Inject constructor(
-    private val offlineLocationDao: OfflineLocationDao
+    private val offlineLocationDao: OfflineLocationDao,
+    private val familyRepository: FamilyRepository
 ) {
 
     private val auth = FirebaseAuth.getInstance()
@@ -30,9 +32,9 @@ class LocationRepository @Inject constructor(
         val queued = offlineLocationDao.getAllByUid(uid)
         queued.forEach { location ->
             try {
-                // Store location under a timestamp or update the latest
+                // Store location under /latest (single node, overwritten each time)
                 database.child("live_locations").child(uid)
-                    .child(location.timestamp.toString()).setValue(location).await()
+                    .child("latest").setValue(location).await()
                 offlineLocationDao.delete(location)
             } catch (e: Exception) {
                 // Keep in queue on failure
@@ -41,18 +43,35 @@ class LocationRepository @Inject constructor(
     }
 
     fun observeFamilyLocations(familyGroupId: String): Flow<Map<String, TrackedLocation>> = callbackFlow {
-        val ref = database.child("live_locations")
-        val listener = object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val locations = mutableMapOf<String, TrackedLocation>()
-                snapshot.children.forEach { userSnapshot ->
-                    val uid = userSnapshot.key ?: return@forEach
-                    // Get the most recent location from the children (timestamps)
-                    val location = userSnapshot.children.lastOrNull()
-                        ?.getValue(TrackedLocation::class.java) ?: return@forEach
-                    locations[uid] = location
+        val locRef = database.child("live_locations")
+        val membersRef = database.child("family_groups").child(familyGroupId).child("members")
+        var locListener: ValueEventListener? = null
+
+        val memberListener = object : ValueEventListener {
+            override fun onDataChange(memberSnapshot: DataSnapshot) {
+                val memberUids = memberSnapshot.children.mapNotNull { it.key }
+
+                // Remove old location listener if exists (e.g. when members change)
+                locListener?.let { locRef.removeEventListener(it) }
+
+                locListener = object : ValueEventListener {
+                    override fun onDataChange(snapshot: DataSnapshot) {
+                        val locations = mutableMapOf<String, TrackedLocation>()
+                        snapshot.children.forEach { userSnapshot ->
+                            val uid = userSnapshot.key ?: return@forEach
+                            if (uid !in memberUids) return@forEach
+                            val location = userSnapshot.child("latest")
+                                .getValue(TrackedLocation::class.java) ?: return@forEach
+                            locations[uid] = location
+                        }
+                        trySend(locations)
+                    }
+
+                    override fun onCancelled(error: DatabaseError) {
+                        close(error.toException())
+                    }
                 }
-                trySend(locations)
+                locRef.addValueEventListener(locListener!!)
             }
 
             override fun onCancelled(error: DatabaseError) {
@@ -60,14 +79,18 @@ class LocationRepository @Inject constructor(
             }
         }
 
-        ref.addValueEventListener(listener)
-        awaitClose { ref.removeEventListener(listener) }
+        membersRef.addValueEventListener(memberListener)
+
+        awaitClose {
+            membersRef.removeEventListener(memberListener)
+            locListener?.let { locRef.removeEventListener(it) }
+        }
     }
 
     suspend fun getUserLocation(uid: String): TrackedLocation? {
         return try {
-            val snapshot = database.child("live_locations").child(uid).get().await()
-            snapshot.children.lastOrNull()?.getValue(TrackedLocation::class.java)
+            val snapshot = database.child("live_locations").child(uid).child("latest").get().await()
+            snapshot.getValue(TrackedLocation::class.java)
         } catch (e: Exception) {
             null
         }

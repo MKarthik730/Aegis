@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.karthik.aegis.R
+import com.karthik.aegis.ui.MainActivity
 import com.karthik.aegis.utils.AegisPrefs
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -53,7 +54,7 @@ class AegisFirebaseMessagingService : FirebaseMessagingService() {
     private fun showNotification(title: String, body: String, alertType: String) {
         createNotificationChannel()
 
-        val intent = Intent(this, Class.forName("com.karthik.aegis.ui.MainActivity")).apply {
+        val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
             putExtra("alert_type", alertType)
         }
