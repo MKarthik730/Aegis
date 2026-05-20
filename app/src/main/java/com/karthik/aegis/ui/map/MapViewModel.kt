@@ -1,33 +1,27 @@
-package com.karthik.aegis.viewmodel
+package com.karthik.aegis.ui.map
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
 import com.karthik.aegis.model.FamilyMember
-import com.karthik.aegis.model.SOSAlert
+import com.karthik.aegis.model.SafeZone
 import com.karthik.aegis.model.TrackedLocation
 import com.karthik.aegis.repository.FamilyRepository
 import com.karthik.aegis.repository.LocationRepository
-import com.karthik.aegis.repository.SOSRepository
+import com.karthik.aegis.repository.ZoneRepository
 import com.karthik.aegis.utils.AegisPrefs
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import javax.inject.Inject
 
 @HiltViewModel
-class HomeViewModel @Inject constructor(
+class MapViewModel @Inject constructor(
     private val locationRepository: LocationRepository,
     private val familyRepository: FamilyRepository,
-    private val sosRepository: SOSRepository,
+    private val zoneRepository: ZoneRepository,
     private val prefs: AegisPrefs
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(HomeUiState())
-    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
-
     private val groupId = prefs.getFamilyGroupId() ?: "global"
-
-    val userName: String = FirebaseAuth.getInstance().currentUser?.displayName ?: "User"
 
     val familyMembers: StateFlow<List<FamilyMember>> = familyRepository
         .observeFamilyMembers(groupId)
@@ -37,22 +31,23 @@ class HomeViewModel @Inject constructor(
         .observeFamilyLocations(groupId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
-    val activeAlerts: StateFlow<List<SOSAlert>> = sosRepository
-        .observeSOSAlerts(groupId)
+    val safeZones: StateFlow<List<SafeZone>> = zoneRepository
+        .observeSafeZones()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _isTrackingEnabled = MutableStateFlow(prefs.isLocationTrackingEnabled())
-    val isTrackingEnabled: StateFlow<Boolean> = _isTrackingEnabled.asStateFlow()
+    private val _selectedMember = MutableStateFlow<FamilyMember?>(null)
+    val selectedMember: StateFlow<FamilyMember?> = _selectedMember.asStateFlow()
 
-    fun toggleLocationTracking() {
-        val current = prefs.isLocationTrackingEnabled()
-        val newState = !current
-        prefs.setLocationTrackingEnabled(newState)
-        _isTrackingEnabled.value = newState
+    private val _selectedMemberLocation = MutableStateFlow<TrackedLocation?>(null)
+    val selectedMemberLocation: StateFlow<TrackedLocation?> = _selectedMemberLocation.asStateFlow()
+
+    fun selectMember(member: FamilyMember) {
+        _selectedMember.value = member
+        _selectedMemberLocation.value = familyLocations.value[member.uid]
+    }
+
+    fun clearSelection() {
+        _selectedMember.value = null
+        _selectedMemberLocation.value = null
     }
 }
-
-data class HomeUiState(
-    val isLoading: Boolean = false,
-    val error: String? = null
-)
