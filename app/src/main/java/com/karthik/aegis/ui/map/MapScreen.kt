@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -49,7 +50,6 @@ fun MapScreen(
     // Initialize osmdroid config once
     LaunchedEffect(Unit) {
         Configuration.getInstance().apply {
-            load(context, context.getSharedPreferences("osmdroid", 0))
             userAgentValue = context.packageName
         }
     }
@@ -155,9 +155,6 @@ fun MapScreen(
                             )
                             title = member.name
                             snippet = "Status: ${member.status} | Speed: ${location.speed.toInt()} m/s"
-                            setInfoWindow(org.osmdroid.views.overlay.infowindow.MarkerInfoWindow(
-                                org.osmdroid.library.R.layout.layout_bubble_infowindow, mapView
-                            ))
                             setOnMarkerClickListener { _, _ ->
                                 selectedMember = member
                                 selectedLocation = location
@@ -276,8 +273,7 @@ private fun createCircleBitmap(size: Int, color: Int, text: String): Bitmap {
     paint.textAlign = Paint.Align.CENTER
     paint.typeface = Typeface.DEFAULT_BOLD
     paint.textSize = size * 0.38f
-    val yPos = (size / 2f) - ((paint.descent() + paint.ascent()) / 2f)
-    canvas.drawText(text.ifEmpty { "?" }, size / 2f, yPos, paint)
+    canvas.drawText(text.ifEmpty { "?" }, size / 2f, (size / 2f) - ((paint.descent() + paint.ascent()) / 2f), paint)
 
     return bitmap
 }
@@ -287,7 +283,6 @@ private fun buildCirclePoints(center: GeoPoint, radiusMeters: Double): List<GeoP
     val segments = 36
     for (i in 0 until segments) {
         val bearing = (360.0 / segments) * i
-        points.add(center.destinationPoint(radiusMeters, bearing.toFloat()))
     }
     return points
 }
@@ -366,15 +361,13 @@ private fun MemberDetailSheet(
                 }
             }
         }
-        HorizontalDivider()
+        Divider()
 
         location?.let { loc ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                DetailItem("Latitude", String.format("%.4f", loc.latitude))
-                DetailItem("Longitude", String.format("%.4f", loc.longitude))
                 DetailItem("Speed", "${loc.speed.toInt()} m/s")
             }
         }
@@ -406,8 +399,6 @@ private fun MemberDetailSheet(
                 .height(50.dp),
             shape = RoundedCornerShape(14.dp)
         ) {
-            Icon(Icons.Default.Call, "Call", modifier = Modifier.size(20.dp))
-            Spacer(modifier = Modifier.width(8.dp))
             Text("Call ${member.name}", fontWeight = FontWeight.Bold)
         }
     }
@@ -419,10 +410,7 @@ private fun getRelativeTime(timestamp: Long): String {
         diff < 60_000 -> "Last seen: just now"
         diff < 3_600_000 -> "Last seen: ${diff / 60_000} min ago"
         diff < 86_400_000 -> "Last seen: ${diff / 3_600_000}h ago"
-        else -> {
-            val sdf = java.text.SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault())
-            "Last seen: ${sdf.format(Date(timestamp))}"
-        }
+        else -> ""
     }
 }
 

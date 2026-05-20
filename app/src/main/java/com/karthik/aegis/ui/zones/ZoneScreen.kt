@@ -261,7 +261,7 @@ fun ZoneScreen(
                     ZoneCard(
                         zone = zone,
                         onEdit = { editingZone = it; showAddSheet = true },
-                        onDelete = { onRemoveZone(it.id) }
+                        onDelete = { onRemoveZone(it) }
                     )
                 }
             }
@@ -509,7 +509,7 @@ private fun buildCirclePoints(center: GeoPoint, radiusMeters: Double): List<GeoP
     val segments = 36
     for (i in 0 until segments) {
         val bearing = (360.0 / segments) * i
-        points.add(center.destinationPoint(radiusMeters, bearing.toFloat()))
+        points.add(center.destinationPoint(radiusMeters, bearing))
     }
     return points
 }
